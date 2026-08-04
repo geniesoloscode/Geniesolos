@@ -34,6 +34,43 @@
   const calm = reduced || still;   /* "don't run perpetual motion" */
 
   /* ─────────────────────────────────────────────────────────────
+     0. THEME
+     The two designs are almost entirely CSS, but the particle field
+     and the generative portrait paint to <canvas>, where stylesheets
+     can't reach. Their colours live here and are re-read on switch.
+     ───────────────────────────────────────────────────────────── */
+  const THEME = {
+    light: {
+      particles: [[21, 154, 92], [46, 196, 122], [124, 58, 237], [150, 110, 240], [232, 158, 16]],
+      bg: [250, 245, 236],
+      fade: 0.05,
+      meta: '#FAF5EC',
+      avatar: {
+        top: [23, 161, 94], bottom: [124, 58, 237],
+        accent: '124,58,237', tick: '240,163,26',
+        alphaBase: 0.52, alphaNear: 0.45
+      }
+    },
+    dark: {
+      particles: [[0, 255, 156], [0, 255, 156], [182, 255, 58], [182, 255, 58], [255, 214, 10]],
+      bg: [6, 8, 7],
+      fade: 0.055,
+      meta: '#060807',
+      avatar: {
+        top: [0, 255, 156], bottom: [255, 214, 10],
+        accent: '0,255,156', tick: '255,214,10',
+        alphaBase: 0.30, alphaNear: 0.62
+      }
+    }
+  };
+
+  const themeWatchers = [];
+  const themeName = () =>
+    document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+  const theme = () => THEME[themeName()];
+  const onThemeChange = fn => themeWatchers.push(fn);
+
+  /* ─────────────────────────────────────────────────────────────
      1. BOOT SEQUENCE
      ───────────────────────────────────────────────────────────── */
   (function boot() {
@@ -118,16 +155,12 @@
       );
     }
 
-    /* threads of brand colour drifting over the cream canvas */
-    const PALETTE = [
-      [21, 154, 92], [46, 196, 122],          /* greens  */
-      [124, 58, 237], [150, 110, 240],        /* violets */
-      [232, 158, 16]                          /* amber   */
-    ];
-    const CANVAS_BG = [250, 245, 236];        /* --cream, for the trail fade */
+    let pal  = theme().particles;
+    let bg   = theme().bg;
+    let fade = theme().fade;
 
     function makeParticle(seed) {
-      const c = PALETTE[Math.floor(Math.random() * PALETTE.length)];
+      const c = pal[Math.floor(Math.random() * pal.length)];
       return {
         x: Math.random() * W,
         y: Math.random() * H,
@@ -149,7 +182,7 @@
       cv.style.width  = W + 'px';
       cv.style.height = H + 'px';
       ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-      ctx.fillStyle = 'rgb(' + CANVAS_BG.join(',') + ')';
+      ctx.fillStyle = 'rgb(' + bg.join(',') + ')';
       ctx.fillRect(0, 0, W, H);
 
       const target = clamp(Math.round((W * H) / 13000), 40, 170);
@@ -163,7 +196,7 @@
       if (still && ++frames > 300) { raf = 0; return; }
 
       /* trail fade — lower alpha = longer, more painterly trails */
-      ctx.fillStyle = 'rgba(' + CANVAS_BG.join(',') + ', 0.05)';
+      ctx.fillStyle = 'rgba(' + bg.join(',') + ',' + fade + ')';
       ctx.fillRect(0, 0, W, H);
 
       const SCALE = 0.0022;
@@ -224,6 +257,20 @@
       else if (!raf) raf = requestAnimationFrame(frame);
     });
 
+    onThemeChange(() => {
+      pal = theme().particles;
+      bg = theme().bg;
+      fade = theme().fade;
+      /* hard-clear rather than letting it cross-fade: the old palette's
+         trails would otherwise sit on the new background for a second,
+         which reads as a rendering fault rather than a transition */
+      ctx.fillStyle = 'rgb(' + bg.join(',') + ')';
+      ctx.fillRect(0, 0, W, H);
+      for (let i = 0; i < particles.length; i++) {
+        particles[i].c = pal[Math.floor(Math.random() * pal.length)];
+      }
+    });
+
     resize();
     raf = requestAnimationFrame(frame);
   })();
@@ -236,6 +283,9 @@
     if (!cv) return;
     const ctx = cv.getContext('2d');
     const S = 440;
+
+    let av = theme().avatar;
+    let lastTs = 0;
 
     /* half-width of the figure at a given y — head, neck, shoulders */
     function halfWidth(y) {
@@ -253,6 +303,7 @@
     const TOP = 108, BOT = 372, STEP = 5;
 
     function draw(time) {
+      lastTs = time;
       ctx.clearRect(0, 0, S, S);
 
       /* backdrop rings */
@@ -260,7 +311,7 @@
       ctx.translate(S / 2, S / 2);
       ctx.rotate(time * 0.00012);
       for (let r = 74; r <= 206; r += 33) {
-        ctx.strokeStyle = 'rgba(124,58,237,' + (0.26 - r / 1400) + ')';
+        ctx.strokeStyle = 'rgba(' + av.accent + ',' + (0.26 - r / 1400) + ')';
         ctx.lineWidth = 1;
         ctx.setLineDash([2, 9]);
         ctx.beginPath();
@@ -271,7 +322,7 @@
       ctx.restore();
 
       /* dot matrix */
-      ctx.fillStyle = 'rgba(124,58,237,0.13)';
+      ctx.fillStyle = 'rgba(' + av.accent + ',0.13)';
       for (let x = 20; x < S; x += 22) {
         for (let y = 20; y < S; y += 22) { ctx.fillRect(x, y, 1.4, 1.4); }
       }
@@ -283,35 +334,36 @@
         const hw = halfWidth(y);
         if (hw < 1) continue;
 
-        /* green at the crown fading to violet at the shoulders */
+        /* the ramp runs crown to shoulders: green→violet on cream,
+           green→amber on black */
         const k = (y - TOP) / (BOT - TOP);
-        const r = Math.round(lerp(23, 124, k));
-        const g = Math.round(lerp(161, 58, k));
-        const b = Math.round(lerp(94, 237, k));
+        const r = Math.round(lerp(av.top[0], av.bottom[0], k));
+        const g = Math.round(lerp(av.top[1], av.bottom[1], k));
+        const b = Math.round(lerp(av.top[2], av.bottom[2], k));
 
         /* glitch offset — deterministic per stripe, drifts with time */
         const seed = Math.sin(y * 12.9898 + Math.floor(time / 900) * 78.233) * 43758.5453;
         const rnd = seed - Math.floor(seed);
         const shift = rnd > 0.94 ? (rnd - 0.5) * 34 : 0;
 
-        /* higher floor than the dark original — these are saturated inks
-           on warm paper now, not glowing phosphor on black */
+        /* light needs a higher floor (saturated ink on warm paper);
+           dark can sit lower and let the highlight band do the work */
         const near = 1 - clamp(Math.abs(y - band) / 58, 0, 1);
-        const alpha = 0.52 + near * 0.45;
+        const alpha = av.alphaBase + near * av.alphaNear;
 
         ctx.fillStyle = 'rgba(' + r + ',' + g + ',' + b + ',' + alpha.toFixed(3) + ')';
         ctx.fillRect(S / 2 - hw + shift, y, hw * 2, 2.1);
 
         /* leading edge ticks */
         if (rnd > 0.86) {
-          ctx.fillStyle = 'rgba(240,163,26,' + (0.45 + near * 0.5).toFixed(3) + ')';
+          ctx.fillStyle = 'rgba(' + av.tick + ',' + (0.45 + near * 0.5).toFixed(3) + ')';
           ctx.fillRect(S / 2 + hw + 6 + shift, y, 10 + rnd * 22, 2.1);
           ctx.fillRect(S / 2 - hw - 16 - rnd * 22 + shift, y, 10 + rnd * 22, 2.1);
         }
       }
 
       /* outline glow */
-      ctx.strokeStyle = 'rgba(124,58,237,0.34)';
+      ctx.strokeStyle = 'rgba(' + av.accent + ',0.34)';
       ctx.lineWidth = 1.2;
       ctx.beginPath();
       for (let y = TOP; y <= BOT; y += 2) {
@@ -327,7 +379,7 @@
       ctx.stroke();
 
       /* corner reticles */
-      ctx.strokeStyle = 'rgba(240,163,26,0.75)';
+      ctx.strokeStyle = 'rgba(' + av.tick + ',0.75)';
       ctx.lineWidth = 1.4;
       [[26, 26, 1, 1], [S - 26, 26, -1, 1], [26, S - 26, 1, -1], [S - 26, S - 26, -1, -1]]
         .forEach(([x, y, sx, sy]) => {
@@ -336,6 +388,10 @@
           ctx.stroke();
         });
     }
+
+    /* registered before the calm early-return, or a reduced-motion
+       visitor's portrait would keep the old palette after switching */
+    onThemeChange(() => { av = theme().avatar; draw(lastTs); });
 
     if (calm) { draw(2400); return; }
 
@@ -563,7 +619,49 @@
   })();
 
   /* ─────────────────────────────────────────────────────────────
-     9. MISC
+     9. THEME TOGGLE
+     ───────────────────────────────────────────────────────────── */
+  (function themeToggle() {
+    const btn = $('#themeToggle');
+    if (!btn) return;
+
+    const meta = $('#themeColor');
+    const root = document.documentElement;
+
+    function apply(name, persist) {
+      if (name === 'dark') root.setAttribute('data-theme', 'dark');
+      else root.removeAttribute('data-theme');
+
+      btn.setAttribute('aria-checked', String(name === 'dark'));
+      btn.setAttribute('aria-label', name === 'dark' ? 'Light theme' : 'Dark theme');
+      if (meta) meta.setAttribute('content', THEME[name].meta);
+
+      if (persist) {
+        try { localStorage.setItem('gs-theme', name); } catch (e) { /* private mode */ }
+      }
+      themeWatchers.forEach(fn => { try { fn(name); } catch (e) { /* keep the rest alive */ } });
+    }
+
+    /* sync control state with whatever the inline head script decided */
+    apply(themeName(), false);
+
+    btn.addEventListener('click', () => {
+      apply(themeName() === 'dark' ? 'light' : 'dark', true);
+    });
+
+    /* follow the OS only while the visitor has never chosen for themselves */
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const onSystem = e => {
+      let chosen = null;
+      try { chosen = localStorage.getItem('gs-theme'); } catch (err) { /* ignore */ }
+      if (!chosen) apply(e.matches ? 'dark' : 'light', false);
+    };
+    if (mq.addEventListener) mq.addEventListener('change', onSystem);
+    else if (mq.addListener) mq.addListener(onSystem);
+  })();
+
+  /* ─────────────────────────────────────────────────────────────
+     10. MISC
      ───────────────────────────────────────────────────────────── */
   const yr = $('#year');
   if (yr) yr.textContent = '© ' + new Date().getFullYear();

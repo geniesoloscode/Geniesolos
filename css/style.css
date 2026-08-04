@@ -985,6 +985,15 @@ main { position: relative; z-index: 4; }
 .proj__link--static { color: var(--muted); border-bottom-color: transparent; cursor: default; font-weight: 500; }
 .proj__link--static:hover { color: var(--muted); gap: 8px; }
 
+/* the cloud illustration draws from the palette tokens, so it re-colours
+   with the theme instead of carrying baked-in hex values */
+.viz-s0   { stop-color: var(--green-bright); }
+.viz-s1   { stop-color: var(--violet-bright); }
+.viz-arrow { stroke: var(--green); }
+.viz-d1   { fill: var(--sun); }
+.viz-d2   { fill: var(--green-bright); }
+.viz-d3   { fill: var(--violet-bright); }
+
 .proj--wide { grid-column: span 2; display: grid; grid-template-columns: 1fr minmax(0, 240px); align-items: center; }
 .proj__viz { padding: 30px; }
 .proj__viz svg { animation: floaty 6s ease-in-out infinite; }
@@ -1224,6 +1233,346 @@ main { position: relative; z-index: 4; }
   .stat { padding: 18px 12px 16px; }
   .cert--hero { padding: 24px 20px; }
   .cert__year { position: static; display: inline-block; margin-top: 14px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   THEME TOGGLE CONTROL
+   ═══════════════════════════════════════════════════════════════ */
+.nav__end { display: flex; align-items: center; gap: 10px; flex: none; }
+.nav__links { margin-left: auto; }
+
+.themetog {
+  position: relative; flex: none;
+  width: 58px; height: 30px;
+  border-radius: 999px;
+  background: var(--cream-2);
+  border: 1px solid var(--line);
+  transition: background .3s, border-color .3s, box-shadow .3s;
+}
+.themetog:hover { border-color: var(--violet); box-shadow: 0 0 0 4px rgba(124, 58, 237, .1); }
+
+.themetog__thumb {
+  position: absolute; top: 2px; left: 2px;
+  width: 24px; height: 24px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: linear-gradient(135deg, var(--sun-bright), var(--amber));
+  color: #4A3000;
+  box-shadow: 0 2px 6px rgba(70, 56, 110, .25);
+  transition: transform .4s var(--ease), background .3s, color .3s;
+}
+.themetog__ico {
+  grid-area: 1 / 1;
+  transition: opacity .28s var(--ease), transform .35s var(--ease);
+}
+.themetog__ico--moon { opacity: 0; transform: rotate(-50deg) scale(.5); }
+
+/* ═══════════════════════════════════════════════════════════════
+   DARK THEME — the original "cyber terminal" art direction.
+   Black canvas, phosphor green, acid lime, amber. Set by the toggle
+   as [data-theme="dark"] on <html>.
+
+   Most of this is a token remap: the palette below re-points every
+   custom property, and the purple family maps onto acid lime, so
+   every violet accent in the light design becomes green for free.
+   The rules after it are the ones that hard-coded rgba() values,
+   plus the places where the *feel* changes rather than just the hue
+   (tighter radii, glow instead of soft shadow, the grid horizon).
+   ═══════════════════════════════════════════════════════════════ */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* surfaces */
+  --cream:   #060807;
+  --cream-2: #0d1310;
+  --band:    #0a0f0c;
+  --paper:   #0c1310;
+
+  /* ink */
+  --ink:   #e6f4ec;
+  --ink-2: #a9c3b6;
+  --muted: #7d9488;
+
+  /* green — on black, the bright value IS the readable one */
+  --green:        #00ff9c;
+  --green-deep:   #00ff9c;
+  --green-bright: #00ff9c;
+
+  /* yellow — no longer needs a darkened text variant */
+  --sun:        #ffd60a;
+  --sun-bright: #ffe14d;
+  --amber:      #ffb703;
+  --amber-deep: #ffd60a;
+
+  /* the purple family becomes acid lime — this is what converts the
+     whole design in one move, since violet carries most accents */
+  --violet:        #b6ff3a;
+  --violet-deep:   #d2ff7d;
+  --violet-bright: #b6ff3a;
+  --lilac:         rgba(182, 255, 58, .13);
+
+  --line:      rgba(0, 255, 156, .2);
+  --line-soft: rgba(0, 255, 156, .13);
+
+  /* shadows read as depth on cream and as nothing on black, so they
+     become a dark drop plus a faint phosphor bloom */
+  --shadow-sm: 0 2px 10px rgba(0, 0, 0, .5),  0 0 0 1px rgba(0, 255, 156, .04);
+  --shadow-md: 0 8px 26px rgba(0, 0, 0, .58), 0 0 22px -6px rgba(0, 255, 156, .18);
+  --shadow-lg: 0 16px 48px rgba(0, 0, 0, .66), 0 0 34px -8px rgba(0, 255, 156, .26);
+
+  --grad-brand: linear-gradient(100deg, var(--green), var(--violet) 50%, var(--sun));
+  --grad-text:  linear-gradient(100deg, var(--green), var(--violet) 55%, var(--sun));
+
+  /* sharper corners — the cyber build was harder-edged than the sunroom */
+  --r: 14px;
+  --r-lg: 18px;
+}
+
+/* toggle control in dark */
+:root[data-theme="dark"] .themetog__thumb {
+  transform: translateX(28px);
+  background: linear-gradient(135deg, var(--green), var(--violet));
+  color: #04120b;
+  box-shadow: 0 0 14px rgba(0, 255, 156, .5);
+}
+:root[data-theme="dark"] .themetog__ico--sun  { opacity: 0; transform: rotate(50deg) scale(.5); }
+:root[data-theme="dark"] .themetog__ico--moon { opacity: 1; transform: none; }
+:root[data-theme="dark"] .themetog:hover { box-shadow: 0 0 0 4px rgba(0, 255, 156, .12); }
+
+/* ── buttons ─────────────────────────────────────────────────── */
+/* the ghost button's light fill is a hardcoded near-white; on black it
+   reads as a disabled grey slab, so it becomes a tinted outline instead */
+:root[data-theme="dark"] .btn--ghost {
+  background: rgba(182, 255, 58, .06);
+  border-color: rgba(182, 255, 58, .45);
+  color: var(--violet);
+}
+:root[data-theme="dark"] .btn--ghost:hover {
+  background: rgba(182, 255, 58, .14);
+  border-color: var(--violet);
+  box-shadow: 0 0 22px -4px rgba(182, 255, 58, .5);
+}
+:root[data-theme="dark"] .btn--solid {
+  color: #04120b;
+  box-shadow: 0 0 26px -6px rgba(0, 255, 156, .6);
+}
+:root[data-theme="dark"] .btn--solid:hover { box-shadow: 0 0 34px -4px rgba(0, 255, 156, .75); }
+
+/* ── ambient ─────────────────────────────────────────────────── */
+:root[data-theme="dark"] .vignette {
+  background:
+    radial-gradient(120% 90% at 50% 0%,   rgba(0, 255, 156, .08), transparent 55%),
+    radial-gradient(90%  70% at 85% 85%,  rgba(255, 214, 10, .05), transparent 60%),
+    radial-gradient(130% 110% at 50% 50%, transparent 45%, rgba(0, 0, 0, .78) 100%);
+}
+/* paper grain goes back to being CRT scanlines */
+:root[data-theme="dark"] .scanlines {
+  opacity: .5;
+  background: repeating-linear-gradient(
+    to bottom, rgba(0, 255, 156, .035) 0 1px, transparent 1px 3px);
+  mix-blend-mode: overlay;
+}
+:root[data-theme="dark"] .cursor-glow {
+  background: radial-gradient(circle, rgba(0, 255, 156, .10), rgba(182, 255, 58, .04) 40%, transparent 68%);
+}
+:root[data-theme="dark"] .scroll-progress { background: rgba(0, 255, 156, .08); }
+:root[data-theme="dark"] .scroll-progress span { box-shadow: 0 0 12px rgba(0, 255, 156, .6); }
+:root[data-theme="dark"] .skip { color: #04120b; }
+
+/* ── boot ────────────────────────────────────────────────────── */
+:root[data-theme="dark"] .boot::before {
+  background: linear-gradient(135deg, rgba(0, 255, 156, .3), rgba(182, 255, 58, .18));
+}
+:root[data-theme="dark"] .boot::after {
+  background: linear-gradient(315deg, rgba(255, 214, 10, .22), rgba(0, 255, 156, .16));
+}
+:root[data-theme="dark"] .boot__bar { background: rgba(0, 255, 156, .12); }
+
+/* ── nav ─────────────────────────────────────────────────────── */
+:root[data-theme="dark"] .nav.stuck {
+  background: rgba(6, 8, 7, .82);
+  box-shadow: 0 14px 34px -22px rgba(0, 0, 0, .8);
+}
+:root[data-theme="dark"] .nav__links a:hover { background: rgba(0, 255, 156, .08); }
+:root[data-theme="dark"] .nav__links a.nav__cta,
+:root[data-theme="dark"] .nav__links a.nav__cta:hover,
+:root[data-theme="dark"] .nav__links a.nav__cta.active {
+  color: #04120b;               /* acid lime needs dark text, not white */
+  box-shadow: 0 0 20px -4px rgba(182, 255, 58, .6);
+}
+
+/* ── sections ────────────────────────────────────────────────── */
+:root[data-theme="dark"] .section--alt::before {
+  background: linear-gradient(135deg, rgba(0, 255, 156, .12), rgba(255, 214, 10, .08));
+}
+:root[data-theme="dark"] .section--alt::after {
+  background: linear-gradient(35deg, rgba(182, 255, 58, .12), rgba(0, 255, 156, .07));
+}
+:root[data-theme="dark"] .shead__rule {
+  background: linear-gradient(90deg, rgba(0, 255, 156, .5), rgba(182, 255, 58, .4) 40%, rgba(255, 214, 10, .3) 75%, transparent);
+}
+
+/* ── hero ────────────────────────────────────────────────────── */
+:root[data-theme="dark"] .hero::before {
+  background: linear-gradient(135deg, rgba(0, 255, 156, .3), rgba(182, 255, 58, .2) 58%, rgba(255, 214, 10, .14));
+}
+:root[data-theme="dark"] .hero::after { border-color: rgba(182, 255, 58, .3); }
+:root[data-theme="dark"] .hero__glow {
+  background: linear-gradient(35deg, rgba(0, 255, 156, .26), rgba(255, 214, 10, .12) 70%);
+}
+
+/* the dot meadow becomes the original perspective grid horizon */
+:root[data-theme="dark"] .hero__grid {
+  right: auto; bottom: 0;
+  left: -30%; width: 160%; height: 58%;
+  background-image:
+    linear-gradient(rgba(0, 255, 156, .85) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 156, .6) 1px, transparent 1px);
+  background-size: 90px 56px;
+  transform: perspective(300px) rotateX(72deg);
+  transform-origin: bottom center;
+  mask-image: linear-gradient(to top, #000 0%, #000 34%, transparent 88%);
+  -webkit-mask-image: linear-gradient(to top, #000 0%, #000 34%, transparent 88%);
+  animation: gridRun 3.2s linear infinite;
+  opacity: .5;
+}
+@keyframes gridRun { to { background-position: 0 56px, 0 0; } }
+
+:root[data-theme="dark"] .hero__eyebrow {
+  background: rgba(0, 255, 156, .05);
+  border-color: rgba(0, 255, 156, .3);
+}
+:root[data-theme="dark"] .hero__eyebrow .dot { box-shadow: 0 0 10px var(--green); }
+:root[data-theme="dark"] .hero__name .accent {
+  background: linear-gradient(100deg, var(--green) 0%, var(--violet) 45%, var(--sun) 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 0 26px rgba(0, 255, 156, .3));
+}
+:root[data-theme="dark"] .caret {
+  background: linear-gradient(180deg, var(--violet), var(--green));
+  box-shadow: 0 0 10px rgba(182, 255, 58, .6);
+}
+/* the highlighter pen doesn't exist on black — underline in phosphor instead */
+:root[data-theme="dark"] .hero__blurb strong {
+  background: linear-gradient(180deg, transparent 92%, rgba(0, 255, 156, .55) 92%);
+}
+:root[data-theme="dark"] .hero__mouse { border-color: rgba(0, 255, 156, .35); }
+
+:root[data-theme="dark"] .stat:nth-child(1) { --acc-blob: linear-gradient(135deg, rgba(0, 255, 156, .35),  rgba(0, 255, 156, .05)); }
+:root[data-theme="dark"] .stat:nth-child(2) { --acc-blob: linear-gradient(135deg, rgba(255, 214, 10, .32), rgba(255, 214, 10, .05)); }
+:root[data-theme="dark"] .stat:nth-child(3) { --acc-blob: linear-gradient(135deg, rgba(182, 255, 58, .32), rgba(182, 255, 58, .05)); }
+:root[data-theme="dark"] .stat:nth-child(4) { --acc-blob: linear-gradient(135deg, rgba(0, 255, 156, .28), rgba(255, 214, 10, .22)); }
+:root[data-theme="dark"] .stat__num {
+  background: linear-gradient(180deg, var(--green), var(--sun));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+
+/* ── marquee — stays a bright ribbon, so its text must stay dark ── */
+:root[data-theme="dark"] .marquee {
+  background: linear-gradient(90deg, var(--green), var(--violet) 46%, var(--sun));
+  box-shadow: 0 18px 40px -20px rgba(0, 255, 156, .35);
+}
+:root[data-theme="dark"] .marquee span { color: #04120b; }
+:root[data-theme="dark"] .marquee i { color: rgba(4, 18, 11, .55); }
+
+/* ── about ───────────────────────────────────────────────────── */
+:root[data-theme="dark"] .portrait::before {
+  background: linear-gradient(140deg, rgba(0, 255, 156, .3), rgba(255, 214, 10, .2));
+}
+:root[data-theme="dark"] .portrait canvas {
+  background:
+    radial-gradient(circle at 30% 20%, rgba(0, 255, 156, .1), transparent 55%),
+    radial-gradient(circle at 78% 82%, rgba(182, 255, 58, .08), transparent 55%),
+    #050807;
+}
+:root[data-theme="dark"] .term__bar .r { background: #ff5f57; }
+:root[data-theme="dark"] .term__bar .y { background: var(--amber); }
+:root[data-theme="dark"] .term__bar .g { background: var(--green); }
+:root[data-theme="dark"] .term__out { border-left-color: rgba(0, 255, 156, .22); }
+:root[data-theme="dark"] .term__out a { border-bottom-color: rgba(0, 255, 156, .45); }
+:root[data-theme="dark"] .chips li:hover { border-color: rgba(0, 255, 156, .35); }
+
+/* ── skills ──────────────────────────────────────────────────── */
+:root[data-theme="dark"] .skillcard:nth-child(1) { --acc-soft: rgba(0, 255, 156, .1);  --bar-g: linear-gradient(90deg, #00c97b, var(--green)); }
+:root[data-theme="dark"] .skillcard:nth-child(2) { --acc-soft: rgba(182, 255, 58, .12); --bar-g: linear-gradient(90deg, #8fd42a, var(--violet)); }
+:root[data-theme="dark"] .skillcard:nth-child(3) { --acc-soft: rgba(255, 214, 10, .12); --bar-g: linear-gradient(90deg, var(--amber), var(--sun-bright)); }
+:root[data-theme="dark"] .skillcard:nth-child(4) { --acc-soft: rgba(0, 255, 156, .1);  --bar-g: linear-gradient(90deg, #00c97b, var(--violet)); }
+:root[data-theme="dark"] .skillcard:hover { border-color: rgba(0, 255, 156, .3); }
+:root[data-theme="dark"] .bars b { background: rgba(0, 255, 156, .1); }
+:root[data-theme="dark"] .bars b::after { box-shadow: 0 0 12px rgba(0, 255, 156, .45); }
+
+/* ── certs ───────────────────────────────────────────────────── */
+:root[data-theme="dark"] .cert::after {
+  background: linear-gradient(135deg, rgba(0, 255, 156, .16), rgba(182, 255, 58, .09));
+}
+:root[data-theme="dark"] .cert:hover { border-color: rgba(0, 255, 156, .38); }
+:root[data-theme="dark"] .cert--hero::after {
+  background: linear-gradient(135deg, rgba(255, 214, 10, .22), rgba(0, 255, 156, .16) 70%);
+}
+:root[data-theme="dark"] .cert--hero .cert__glyph {
+  filter: drop-shadow(0 0 14px rgba(255, 214, 10, .6));
+}
+:root[data-theme="dark"] .cert__year {
+  background: rgba(255, 214, 10, .12);
+  border-color: rgba(255, 214, 10, .4);
+}
+
+/* ── work ────────────────────────────────────────────────────── */
+:root[data-theme="dark"] .proj:hover { border-color: rgba(0, 255, 156, .36); }
+:root[data-theme="dark"] .proj__glow {
+  background: radial-gradient(circle, rgba(0, 255, 156, .14), rgba(182, 255, 58, .06) 45%, transparent 66%);
+}
+:root[data-theme="dark"] .proj__quote { background: rgba(255, 214, 10, .07); }
+:root[data-theme="dark"] .tags li { background: rgba(0, 255, 156, .04); }
+:root[data-theme="dark"] .tags li:hover {
+  color: var(--sun); border-color: rgba(255, 214, 10, .5); background: rgba(255, 214, 10, .09);
+}
+:root[data-theme="dark"] .proj__link { border-bottom-color: rgba(0, 255, 156, .35); }
+:root[data-theme="dark"] .proj--cta {
+  background: linear-gradient(140deg, rgba(255, 214, 10, .09), rgba(0, 255, 156, .07) 70%), var(--paper);
+  border-color: rgba(255, 214, 10, .3);
+}
+:root[data-theme="dark"] .proj--cta .proj__link { color: var(--sun); border-color: rgba(255, 214, 10, .4); }
+:root[data-theme="dark"] .proj--cta .proj__link:hover { color: var(--violet); border-color: var(--violet); }
+
+/* ── timeline ────────────────────────────────────────────────── */
+:root[data-theme="dark"] .tl::before { box-shadow: 0 0 0 5px rgba(0, 255, 156, .12); }
+:root[data-theme="dark"] .tl:hover::before { box-shadow: 0 0 0 8px rgba(0, 255, 156, .18), 0 0 18px var(--green); }
+:root[data-theme="dark"] .tl--gold::before { box-shadow: 0 0 0 5px rgba(255, 214, 10, .16); }
+:root[data-theme="dark"] .tl--gold:hover::before { box-shadow: 0 0 0 8px rgba(255, 214, 10, .22), 0 0 18px var(--sun); }
+/* keyframes can't be overridden per-theme, so swap to a green variant */
+:root[data-theme="dark"] .tl--now::before { animation-name: pulseRingDark; }
+@keyframes pulseRingDark {
+  0%   { box-shadow: 0 0 0 5px rgba(182, 255, 58, .35); }
+  70%  { box-shadow: 0 0 0 16px rgba(182, 255, 58, 0); }
+  100% { box-shadow: 0 0 0 5px rgba(182, 255, 58, 0); }
+}
+:root[data-theme="dark"] .tl:hover .tl__card { border-color: rgba(0, 255, 156, .35); }
+:root[data-theme="dark"] .tl--gold:hover .tl__card { border-color: rgba(255, 214, 10, .4); }
+:root[data-theme="dark"] .tl--now:hover .tl__card { border-color: rgba(182, 255, 58, .4); }
+
+/* ── contact + footer ────────────────────────────────────────── */
+:root[data-theme="dark"] .section--contact {
+  background:
+    radial-gradient(58% 50% at 10% 16%, rgba(0, 255, 156, .09), transparent 60%),
+    radial-gradient(52% 46% at 90% 72%, rgba(182, 255, 58, .07), transparent 62%),
+    radial-gradient(40% 36% at 70% 10%, rgba(255, 214, 10, .06), transparent 60%);
+}
+:root[data-theme="dark"] .contact__links a:hover { border-color: rgba(0, 255, 156, .38); }
+
+:root[data-theme="dark"] .foot { background: #040605; color: var(--ink); }
+:root[data-theme="dark"] .foot::before { background: radial-gradient(circle, rgba(0, 255, 156, .16), transparent 70%); }
+:root[data-theme="dark"] .foot::after  { background: radial-gradient(circle, rgba(255, 214, 10, .13), transparent 70%); }
+:root[data-theme="dark"] .foot__sig {
+  background: linear-gradient(90deg, var(--green), var(--violet) 55%, var(--sun));
+  -webkit-background-clip: text; background-clip: text;
+}
+:root[data-theme="dark"] .foot__sig span { -webkit-text-fill-color: var(--muted); }
+:root[data-theme="dark"] .foot__meta  { color: var(--muted); }
+:root[data-theme="dark"] .foot__built { color: var(--muted); }
+
+:root[data-theme="dark"] .totop:hover {
+  color: #04120b;
+  box-shadow: 0 0 24px -4px rgba(182, 255, 58, .6);
 }
 
 /* ── Still mode (?still=1) — settled page for screenshots ───── */

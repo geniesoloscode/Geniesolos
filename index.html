@@ -6,7 +6,26 @@
 <title>Gene Garland — Systems Engineer &amp; Cybersecurity Specialist</title>
 <meta name="description" content="Gene Garland (GenieSolos) — U.S. federal Systems Engineer with 10 years securing and automating enterprise fleets. CISSP. M.S. Cybersecurity. Secret clearance. I also build striking websites for small businesses.">
 <meta name="author" content="Gene Garland">
-<meta name="theme-color" content="#FAF5EC">
+<meta name="theme-color" content="#FAF5EC" id="themeColor">
+
+<!-- Applies the saved theme before first paint. Inline and above the
+     stylesheet on purpose: anything deferred lets a dark-theme visitor
+     eat a full-screen cream flash on every page load. -->
+<script>
+(function () {
+  var pick = null;
+  var q = /[?&]theme=(dark|light)\b/.exec(location.search);   // shareable / testable
+  if (q) { pick = q[1]; }
+  else {
+    try { pick = localStorage.getItem('gs-theme'); } catch (e) { /* private mode */ }
+  }
+  if (pick === 'dark') {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    var m = document.getElementById('themeColor');
+    if (m) m.setAttribute('content', '#060807');
+  }
+})();
+</script>
 
 <meta property="og:type" content="website">
 <meta property="og:title" content="Gene Garland — Systems Engineer &amp; Cybersecurity Specialist">
@@ -72,9 +91,26 @@
     <a href="#contact" data-nav class="nav__cta">Contact</a>
   </nav>
 
-  <button class="nav__toggle" id="navToggle" aria-label="Toggle navigation" aria-expanded="false" aria-controls="navLinks">
-    <span></span><span></span><span></span>
-  </button>
+  <div class="nav__end">
+    <button class="themetog" id="themeToggle" type="button" role="switch" aria-checked="false"
+            aria-label="Dark theme" title="Switch theme">
+      <span class="themetog__thumb" aria-hidden="true">
+        <svg class="themetog__ico themetog__ico--sun" viewBox="0 0 24 24" width="15" height="15">
+          <circle cx="12" cy="12" r="4.2" fill="currentColor"/>
+          <g stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M12 2.6v2.2M12 19.2v2.2M21.4 12h-2.2M4.8 12H2.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6M18.7 18.7l-1.6-1.6M6.9 6.9 5.3 5.3"/>
+          </g>
+        </svg>
+        <svg class="themetog__ico themetog__ico--moon" viewBox="0 0 24 24" width="15" height="15">
+          <path d="M20 14.2A8.4 8.4 0 0 1 9.8 4a8.4 8.4 0 1 0 10.2 10.2Z" fill="currentColor"/>
+        </svg>
+      </span>
+    </button>
+
+    <button class="nav__toggle" id="navToggle" aria-label="Toggle navigation" aria-expanded="false" aria-controls="navLinks">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
 </header>
 
 <main>
@@ -381,10 +417,10 @@
         </div>
         <div class="proj__viz proj__viz--cloud" aria-hidden="true">
           <svg viewBox="0 0 200 160" width="100%" height="100%">
-            <defs><linearGradient id="gA" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2ED47F"/><stop offset="1" stop-color="#7C3AED"/></linearGradient></defs>
-            <path d="M60 110a26 26 0 0 1-4-51.6 34 34 0 0 1 65 6.4A24 24 0 0 1 144 110Z" fill="none" stroke="url(#gA)" stroke-width="2.2" stroke-linejoin="round"/>
-            <path d="M100 118v28m0 0-10-10m10 10 10-10" fill="none" stroke="#17A15E" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-            <circle cx="46" cy="34" r="2.5" fill="#FFC933"/><circle cx="164" cy="52" r="2.5" fill="#2ED47F"/><circle cx="26" cy="96" r="2" fill="#A78BFA"/>
+            <defs><linearGradient id="gA" x1="0" y1="0" x2="1" y2="1"><stop class="viz-s0" offset="0"/><stop class="viz-s1" offset="1"/></linearGradient></defs>
+            <path class="viz-cloud" d="M60 110a26 26 0 0 1-4-51.6 34 34 0 0 1 65 6.4A24 24 0 0 1 144 110Z" fill="none" stroke="url(#gA)" stroke-width="2.2" stroke-linejoin="round"/>
+            <path class="viz-arrow" d="M100 118v28m0 0-10-10m10 10 10-10" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle class="viz-d1" cx="46" cy="34" r="2.5"/><circle class="viz-d2" cx="164" cy="52" r="2.5"/><circle class="viz-d3" cx="26" cy="96" r="2"/>
           </svg>
         </div>
       </article>
