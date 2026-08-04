@@ -529,13 +529,14 @@ main { position: relative; z-index: 4; }
 }
 .hero__name span { animation: fadeUp .9s .2s both var(--ease); }
 .hero__name span:last-child { animation-delay: .32s; }
+/* Green into deep gold. The gold end is #B87A00, not the #FFC933 used for
+   fills and highlights: pure yellow sits at ~1.4:1 on cream, so the tail of
+   the name would all but disappear. #B87A00 clears 3:1 for large text while
+   still reading unmistakably as yellow. oklch keeps the ramp saturated
+   through the yellow-green midpoint instead of muddying to olive. */
 .hero__name .accent {
-  background: linear-gradient(105deg, #0E8F53, var(--green) 32%, var(--violet) 88%);
-  /* oklch, not oklab: both sRGB and oklab are Cartesian, so a green→violet
-     ramp crosses the neutral axis and sags to slate-grey in the middle —
-     glaring at 148px. oklch interpolates hue angularly, so the ramp travels
-     green → teal → blue → violet and stays saturated the whole way. */
-  background: linear-gradient(105deg in oklch, #0E8F53, var(--green) 30%, var(--violet) 90%);
+  background: linear-gradient(105deg, #0C7A46, #17A15E 28%, #C8890A 76%, #B87A00 100%);
+  background: linear-gradient(105deg in oklch, #0C7A46, #17A15E 28%, #C8890A 76%, #B87A00 100%);
   -webkit-background-clip: text; background-clip: text; color: transparent;
 }
 

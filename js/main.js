@@ -418,11 +418,11 @@
     if (!el) return;
 
     const roles = [
+      'Web Developer & Designer',
+      'Full-Stack Builder · AI Integration',
       'Systems Engineer, U.S. Federal Government',
       'Cybersecurity Specialist · CISSP',
-      'Automation Architect',
-      'M.S. Cybersecurity — Old Dominion University',
-      'Web Designer for Small Business'
+      'I make the web less beige.'
     ];
 
     if (calm) { el.textContent = roles[0]; return; }
