@@ -14,11 +14,11 @@ card-back-300dpi.png           1125 x 675 px
 
 ## Before you print — three checks
 
-1. **Scan the QR with your phone.** It points to `https://geniesolostech.com`. The encoder
+1. **Scan the QR with your phone.** It points to `https://geniesolos.com`. The encoder
    here was written by hand and passes its own structural and round-trip tests, but no
    automated test substitutes for one real scan. Open `card-back-300dpi.png` on screen and
    scan it.
-2. **Buy the domain first.** `geniesolostech.com` is printed as text *and* encoded in the
+2. **Buy the domain first.** `geniesolos.com` is printed as text *and* encoded in the
    QR. Until it is registered and pointing at your site, every scan fails and the printed
    URL goes nowhere. This is the one thing that would make a whole print run useless.
 3. **Ask the printer whether they want RGB or CMYK.** See the color note below.
