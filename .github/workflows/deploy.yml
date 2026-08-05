@@ -37,21 +37,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Prints only the identity claims AWS matches on, never the token
-      # itself. Remove once the trust policy is confirmed working.
-      - name: Show OIDC claims (diagnostic)
-        run: |
-          TOKEN=$(curl -sSL \
-            -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com" | jq -r '.value')
-          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
-            echo "FAILED to mint an OIDC token - id-token permission missing"; exit 0
-          fi
-          P=$(echo "$TOKEN" | cut -d. -f2)
-          while [ $(( ${#P} % 4 )) -ne 0 ]; do P="${P}="; done
-          echo "$P" | tr '_-' '/+' | base64 -d 2>/dev/null \
-            | jq '{sub, aud, repository, repository_owner, ref, event_name}'
-
+      # The trust policy matches GitHub's immutable-ID subject claim,
+      #   repo:geniesolostech@311596157/Geniesolos@1323093297:ref:refs/heads/main
+      # not the name-only form. Both are allowed; if this repo is ever
+      # transferred or renamed, the numeric IDs are what keep working.
       - name: Assume deploy role via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
