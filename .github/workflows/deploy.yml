@@ -1,0 +1,81 @@
+name: Deploy to S3 + CloudFront
+
+# Publishes the site to geniesolos.com on every push to main.
+#
+# Authentication is OIDC role assumption, not stored keys: GitHub mints a
+# short-lived token, AWS trades it for temporary credentials, and the trust
+# policy only accepts tokens from this repo's main branch. There are no AWS
+# secrets in this repository.
+
+on:
+  push:
+    branches: [main]
+    # Skip runs that cannot change what is served
+    paths-ignore:
+      - 'card/**'
+      - '**/*.md'
+      - '.gitignore'
+  workflow_dispatch:
+
+# Never let two deploys race to overwrite the bucket
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  id-token: write      # required to request the OIDC token
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  BUCKET: geniesolos-com-site
+  DISTRIBUTION_ID: E13HIX0DOKUMO1
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Assume deploy role via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::612722076912:role/geniesolos-site-deploy
+          aws-region: ${{ env.AWS_REGION }}
+
+      # Static assets: cached hard at the edge and in browsers. Safe because
+      # the invalidation below clears the edge on every deploy.
+      - name: Sync assets
+        run: |
+          aws s3 sync . "s3://$BUCKET" --delete \
+            --exclude ".git/*" \
+            --exclude ".github/*" \
+            --exclude "card/*" \
+            --exclude "*.md" \
+            --exclude ".nojekyll" \
+            --exclude "*.html" \
+            --cache-control "public, max-age=604800"
+
+      # HTML last, and always revalidated, so a browser never pairs a new
+      # stylesheet with a stale document.
+      - name: Upload HTML
+        run: |
+          aws s3 cp index.html "s3://$BUCKET/index.html" \
+            --cache-control "public, max-age=0, must-revalidate" \
+            --content-type "text/html; charset=utf-8"
+
+      - name: Invalidate CloudFront
+        run: |
+          ID=$(aws cloudfront create-invalidation \
+            --distribution-id "$DISTRIBUTION_ID" \
+            --paths "/*" --query 'Invalidation.Id' --output text)
+          echo "Invalidation $ID created"
+          aws cloudfront wait invalidation-completed \
+            --distribution-id "$DISTRIBUTION_ID" --id "$ID"
+          echo "Invalidation complete"
+
+      - name: Verify the live site
+        run: |
+          CODE=$(curl -s -o /dev/null -w '%{http_code}' https://geniesolos.com/)
+          echo "https://geniesolos.com/ -> $CODE"
+          test "$CODE" = "200"
