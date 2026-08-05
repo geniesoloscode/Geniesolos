@@ -385,18 +385,24 @@ main { position: relative; z-index: 4; }
   align-self: center;
 }
 .shead__num::before { content: '//'; color: var(--green-deep); margin-right: 6px; }
+/* The whole heading speaks in one voice — Fraunces italic in violet.
+   Previously only the <em> word did, which left every section title
+   split between two typefaces and two colours. */
 .shead__title {
+  font-family: var(--serif);
+  font-style: italic;
   font-size: clamp(30px, 4.6vw, 52px);
-  font-weight: 700; letter-spacing: -.02em; line-height: 1.08;
-  white-space: nowrap;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.15;          /* serif italic descenders need the room */
+  color: var(--violet);
   text-wrap: balance;
 }
+/* <em> no longer differentiates anything; kept in the markup so the
+   emphasis stays meaningful to screen readers */
 .shead__title em {
-  font-family: var(--serif);
-  font-style: italic; font-weight: 600;
-  font-size: 1.06em;
-  color: var(--violet);
-  padding-inline: .04em;
+  font: inherit;
+  color: inherit;
 }
 .shead__rule {
   flex: 1; height: 3px; min-width: 24px;
@@ -1614,7 +1620,7 @@ main { position: relative; z-index: 4; }
   .hero { min-height: auto; padding: 24px 0; }
   [data-reveal] { opacity: 1 !important; transform: none !important; }
 
-  .hero__name .accent, .shead__title em, .nav__name, .boot__logo span,
+  .hero__name .accent, .shead__title, .nav__name, .boot__logo span,
   .cert--hero h3, .contact__pitch h3, .foot__sig, .stat__num {
     background: none !important;
     -webkit-text-fill-color: initial !important;
