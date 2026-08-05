@@ -404,6 +404,17 @@ main { position: relative; z-index: 4; }
   font: inherit;
   color: inherit;
 }
+
+/* Opts part of a heading back into the sans voice, for titles that read
+   better with the accent on only some of the words. Uses --ink, so it
+   follows the theme rather than hardcoding black. */
+.shead__title .shead__plain {
+  font-family: var(--sans);
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: -.02em;
+  color: var(--ink);
+}
 .shead__rule {
   flex: 1; height: 3px; min-width: 24px;
   border-radius: 3px;
