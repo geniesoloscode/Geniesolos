@@ -1593,6 +1593,28 @@ main { position: relative; z-index: 4; }
   box-shadow: 0 0 24px -4px rgba(182, 255, 58, .6);
 }
 
+/* ── 404 page ────────────────────────────────────────────────── */
+.nf {
+  position: relative; z-index: 4;
+  min-height: 100svh;
+  display: grid; align-content: center; justify-items: start;
+  gap: 16px;
+  width: min(var(--maxw), 100% - clamp(32px, 8vw, 96px));
+  margin-inline: auto;
+}
+.nf__code {
+  font-family: var(--mono); font-weight: 700; font-size: 12px;
+  letter-spacing: .26em; color: var(--violet-deep);
+  background: var(--lilac); border-radius: 10px; padding: 6px 14px;
+}
+.nf__title {
+  font-family: var(--serif); font-style: italic; font-weight: 600;
+  font-size: clamp(32px, 6vw, 62px); line-height: 1.12;
+  color: var(--violet); text-wrap: balance;
+}
+.nf__text { color: var(--ink-2); max-width: 46ch; }
+.nf .btn { margin-top: 10px; }
+
 /* ── Still mode (?still=1) — settled page for screenshots ───── */
 .still { scroll-behavior: auto !important; }
 .still *, .still *::before, .still *::after {

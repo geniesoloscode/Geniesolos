@@ -64,9 +64,11 @@ jobs:
       # stylesheet with a stale document.
       - name: Upload HTML
         run: |
-          aws s3 cp index.html "s3://$BUCKET/index.html" \
-            --cache-control "public, max-age=0, must-revalidate" \
-            --content-type "text/html; charset=utf-8"
+          for f in index.html 404.html; do
+            aws s3 cp "$f" "s3://$BUCKET/$f" \
+              --cache-control "public, max-age=0, must-revalidate" \
+              --content-type "text/html; charset=utf-8"
+          done
 
       - name: Invalidate CloudFront
         run: |
