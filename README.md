@@ -121,6 +121,35 @@ Type is Space Grotesk (headings and body), Fraunces (italic accents), and JetBra
 
 ---
 
+## Deploying
+
+**Normal path — GitHub Actions.** Push to `main`. `.github/workflows/deploy.yml` syncs to
+S3, invalidates CloudFront, and checks the live site returns 200. Authentication is OIDC
+role assumption; no AWS keys are stored in GitHub.
+
+**Backup path — local.** For when GitHub Actions is unavailable:
+
+```powershell
+.\scripts\deploy.ps1 -DryRun    # show what would change
+.\scripts\deploy.ps1            # deploy for real
+```
+
+It performs the identical steps in the identical order, so either route leaves the bucket
+in the same state. It needs the AWS CLI configured with credentials that can write the
+bucket and create invalidations.
+
+This is worth knowing about: GitHub Actions is the most outage-prone part of GitHub, and an
+outage otherwise leaves no way to ship. The script also deploys the **working tree** rather
+than the committed tree, so it can ship a fix before it is committed — it warns loudly when
+the tree is dirty, because the next workflow run will overwrite whatever it deployed.
+
+> **Both deployers run `aws s3 sync --delete`.** Their `--exclude` lists must stay
+> identical or each will delete what the other uploads, and the site will flip depending on
+> which ran last. `scripts/deploy.ps1` parses the workflow on every run and warns if the
+> two have drifted. If you add an exclude to one, add it to the other.
+
+---
+
 ## Debug flags
 
 Append to the URL when working on the page:
