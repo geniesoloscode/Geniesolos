@@ -598,24 +598,69 @@
     if (!el || calm) return;
 
     const targets = $$('span', el);
+    if (!targets.length) return;
+
     const CHARS = '#@%$&*/\\<>[]{}0123456789';
+    const DURATION = 340;
 
-    function fire() {
-      const node = targets[Math.floor(Math.random() * targets.length)];
-      const real = node.textContent;
-      let frames = 0;
+    /* Captured once and never re-read from the DOM.
+       The previous version took the "real" text off the element at the start
+       of every pass. If a pass began while another was still scrambling, it
+       captured the SCRAMBLED string as the original and then restored to
+       that permanently — the name stuck as garbage until reload.
+       A backgrounded tab guaranteed it: setInterval is clamped to ~1s there,
+       which stretched the 7-frame scramble to ~7s, well past the 4.2s gap
+       before the next pass started. */
+    const original = targets.map(n => n.textContent);
 
-      const id = setInterval(() => {
-        frames++;
-        node.textContent = real.split('').map((ch, i) =>
-          (Math.random() < 0.28 && ch !== ' ') ? CHARS[Math.floor(Math.random() * CHARS.length)] : real[i]
-        ).join('');
-        if (frames > 6) { clearInterval(id); node.textContent = real; }
-      }, 48);
+    let nextTimer = 0, endTimer = 0, raf = 0, active = -1;
 
-      setTimeout(fire, 4200 + Math.random() * 6500);
+    function restore() {
+      if (raf) { cancelAnimationFrame(raf); raf = 0; }
+      if (active >= 0) { targets[active].textContent = original[active]; active = -1; }
     }
-    setTimeout(fire, 4200);
+
+    function run(i) {
+      clearTimeout(endTimer);
+      restore();                       // never leave a previous pass half-done
+      active = i;
+      const text = original[i];
+      const end = performance.now() + DURATION;
+
+      /* rAF paints only. It is frozen in a hidden tab, so it must never own
+         the lifecycle — otherwise a frozen frame strands the name scrambled. */
+      function paint() {
+        if (active !== i) return;      // superseded by a newer pass
+        targets[i].textContent = text.split('').map((ch, k) =>
+          (ch !== ' ' && Math.random() < 0.28)
+            ? CHARS[Math.floor(Math.random() * CHARS.length)]
+            : text[k]
+        ).join('');
+        if (performance.now() < end) raf = requestAnimationFrame(paint);
+      }
+      raf = requestAnimationFrame(paint);
+
+      /* A timer owns the lifecycle. setTimeout still fires when throttled,
+         so the restore and the next cycle happen even if rAF never runs. */
+      endTimer = setTimeout(() => { restore(); schedule(); }, DURATION);
+    }
+
+    function schedule() {
+      clearTimeout(nextTimer);
+      nextTimer = setTimeout(
+        () => run(Math.floor(Math.random() * targets.length)),
+        4200 + Math.random() * 6500
+      );
+    }
+
+    /* Leaving a hidden tab mid-scramble would greet the visitor with a
+       garbled name on return. Settle it before the tab goes away. */
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) { clearTimeout(endTimer); clearTimeout(nextTimer); restore(); }
+      else schedule();
+    });
+
+    schedule();
   })();
 
   /* ─────────────────────────────────────────────────────────────
