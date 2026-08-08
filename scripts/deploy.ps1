@@ -5,7 +5,7 @@
 .DESCRIPTION
     A backup path for when GitHub Actions is unavailable. It performs exactly
     the same steps as .github/workflows/deploy.yml, in the same order, with the
-    same cache headers — so whichever route runs, the bucket ends up identical.
+    same cache headers, so whichever route runs the bucket ends up identical.
 
     This does NOT replace the workflow. Pushing to main still deploys normally.
     Use this only when Actions is down or you need to ship without a commit.
@@ -133,8 +133,12 @@ try {
     # ---------------------------------------------------------------- 4
     Step 4 'Syncing static assets (7-day cache)'
 
+    # max-age is for browsers, s-maxage for CloudFront. A 7-day browser cache
+    # meant a JS fix could not reach a returning visitor for a week, because an
+    # invalidation clears the edge but never the browser. Browsers now
+    # revalidate every 5 minutes while the edge still caches for a week.
     $syncArgs = @('s3', 'sync', '.', "s3://$Bucket", '--delete') + $SyncFilters +
-                @('--cache-control', 'public, max-age=604800')
+                @('--cache-control', 'public, max-age=300, s-maxage=604800')
     if ($DryRun) { $syncArgs += '--dryrun' }
     aws @syncArgs
     if ($LASTEXITCODE -ne 0) { throw "s3 sync failed" }

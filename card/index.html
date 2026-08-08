@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>GenieSolos — Business Card</title>
+<title>GenieSolos Business Card</title>
 <meta name="robots" content="noindex">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,11 +12,11 @@
 
 <style>
 /* ═══════════════════════════════════════════════════════════════
-   GENIESOLOS business card — 3.5 x 2 in US standard.
+   GENIESOLOS business card. 3.5 x 2 in US standard.
 
    Every page is the BLEED size (3.75 x 2.25 in). The trim line sits
    0.125in inside that, and nothing that matters goes closer than
-   0.125in inside the trim — so 0.25in of guaranteed clearance from
+   0.125in inside the trim, so 0.25in of guaranteed clearance from
    the page edge. Backgrounds deliberately run to the page edge so a
    few thousandths of drift at the guillotine never shows a white
    sliver.
@@ -102,7 +102,7 @@ body.show-guides .guides { display: block; }
   border: 0; border-radius: 999px; padding: 7px 15px; cursor: pointer;
 }
 
-/* ═══════════ FRONT — light ═══════════ */
+/* ═══════════ FRONT (light) ═══════════ */
 .front { background: var(--cream); color: var(--ink); }
 .front .blob {
   position: absolute; border-radius: 50%; filter: blur(0.34in); z-index: 1;
@@ -167,7 +167,7 @@ body.show-guides .guides { display: block; }
 .front .foot .site { color: var(--green-deep); font-weight: 700; }
 .front .foot .tag  { color: var(--muted); }
 
-/* ═══════════ BACK — dark ═══════════ */
+/* ═══════════ BACK (dark) ═══════════ */
 .back { background: var(--k-bg); color: var(--k-ink); }
 .back .wash {
   position: absolute; inset: 0; z-index: 1;
@@ -224,7 +224,7 @@ body.show-guides .guides { display: block; }
   text-transform: uppercase; color: var(--k-muted);
 }
 
-/* QR sits on a cream tile, never inverted — a light-on-dark QR is
+/* QR sits on a cream tile, never inverted. A light-on-dark QR is
    rejected by a meaningful share of phone scanners. */
 .qr {
   position: absolute; right: var(--safe); bottom: var(--safe); z-index: 4;
@@ -330,7 +330,7 @@ body.export .card { box-shadow: none; border-radius: 0; }
           <span>GENIESOLOS</span>
         </div>
 
-        <p class="pitch">Websites with color, movement&nbsp;&amp; personality — for <em>small&nbsp;businesses</em>.</p>
+        <p class="pitch">Websites with color, movement&nbsp;&amp; personality for <em>small&nbsp;businesses</em>.</p>
 
         <div class="rows">
           <p class="row"><span class="k">email</span><span class="v">geniesolostech@gmail.com</span></p>
@@ -371,7 +371,7 @@ body.export .card { box-shadow: none; border-radius: 0; }
       document.body.classList.toggle('show-guides');
     });
 
-    /* export isolation — see body.export in the stylesheet */
+    /* export isolation, see body.export in the stylesheet */
     var only = /only=(front|back)/.exec(location.hash);
     if (only) {
       var face = document.querySelector('.card.' + only[1]);

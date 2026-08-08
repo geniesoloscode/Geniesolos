@@ -63,7 +63,7 @@ jobs:
             --include "assets/*" \
             --include "robots.txt" \
             --include "sitemap.xml" \
-            --cache-control "public, max-age=604800"
+            --cache-control "public, max-age=300, s-maxage=604800"
 
       # HTML last, and always revalidated, so a browser never pairs a new
       # stylesheet with a stale document.

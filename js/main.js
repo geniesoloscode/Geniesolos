@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   GENIESOLOS — portfolio runtime
+   GENIESOLOS: portfolio runtime
    Boot sequence · flow-field canvas · generative portrait
    typewriter · scrollspy · reveals · counters · tilt
    ═══════════════════════════════════════════════════════════════ */
@@ -13,7 +13,7 @@
 
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  /* ?still=1 — debug/screenshot mode. Renders the fully-settled page:
+  /* ?still=1: debug/screenshot mode. Renders the fully-settled page:
      no boot, no looping animation, all reveals and counters at final state. */
   const still = /(^|[?&])still=1\b/.test(location.search);
   if (still) {
@@ -86,7 +86,7 @@
     };
 
     /* skip for reduced-motion, for ?noboot (testing), and on repeat
-       views within the same tab session — the intro should delight once */
+       views within the same tab session, so the intro delights once */
     let seen = false;
     try { seen = sessionStorage.getItem('gs-booted') === '1'; } catch (e) { /* private mode */ }
 
@@ -99,7 +99,7 @@
       ['initializing', 'geniesolos.core'],
       ['mounting /identity', 'GENE GARLAND'],
       ['verifying credentials', 'CISSP · 2024'],
-      ['clearance check', 'SECRET — ACTIVE'],
+      ['clearance check', 'SECRET · ACTIVE'],
       ['loading fleet telemetry', '500+ SYSTEMS'],
       ['render', 'PORTFOLIO']
     ];
@@ -195,7 +195,7 @@
       /* still mode: lay down a few hundred frames of trails, then freeze */
       if (still && ++frames > 300) { raf = 0; return; }
 
-      /* trail fade — lower alpha = longer, more painterly trails */
+      /* trail fade: lower alpha = longer, more painterly trails */
       ctx.fillStyle = 'rgba(' + bg.join(',') + ',' + fade + ')';
       ctx.fillRect(0, 0, W, H);
 
@@ -287,7 +287,7 @@
     let av = theme().avatar;
     let lastTs = 0;
 
-    /* half-width of the figure at a given y — head, neck, shoulders */
+    /* half-width of the figure at a given y: head, neck, shoulders */
     function halfWidth(y) {
       let hw = 0;
       const dy = y - 176;
@@ -341,7 +341,7 @@
         const g = Math.round(lerp(av.top[1], av.bottom[1], k));
         const b = Math.round(lerp(av.top[2], av.bottom[2], k));
 
-        /* glitch offset — deterministic per stripe, drifts with time */
+        /* glitch offset: deterministic per stripe, drifts with time */
         const seed = Math.sin(y * 12.9898 + Math.floor(time / 900) * 78.233) * 43758.5453;
         const rnd = seed - Math.floor(seed);
         const shift = rnd > 0.94 ? (rnd - 0.5) * 34 : 0;
@@ -443,7 +443,7 @@
   })();
 
   /* ─────────────────────────────────────────────────────────────
-     5. NAV — sticky, mobile toggle, scrollspy
+     5. NAV: sticky, mobile toggle, scrollspy
      ───────────────────────────────────────────────────────────── */
   (function nav() {
     const bar    = $('#nav');
@@ -607,7 +607,7 @@
        The previous version took the "real" text off the element at the start
        of every pass. If a pass began while another was still scrambling, it
        captured the SCRAMBLED string as the original and then restored to
-       that permanently — the name stuck as garbage until reload.
+       that permanently. The name stuck as garbage until reload.
        A backgrounded tab guaranteed it: setInterval is clamped to ~1s there,
        which stretched the 7-frame scramble to ~7s, well past the 4.2s gap
        before the next pass started. */
@@ -628,7 +628,7 @@
       const end = performance.now() + DURATION;
 
       /* rAF paints only. It is frozen in a hidden tab, so it must never own
-         the lifecycle — otherwise a frozen frame strands the name scrambled. */
+         the lifecycle, otherwise a frozen frame strands the name scrambled. */
       function paint() {
         if (active !== i) return;      // superseded by a newer pass
         targets[i].textContent = text.split('').map((ch, k) =>
@@ -714,7 +714,7 @@
   /* console easter egg */
   if (window.console && console.log) {
     console.log(
-      '%c GENIESOLOS %c Gene Garland — Systems Engineer · CISSP \n' +
+      '%c GENIESOLOS %c Gene Garland · Systems Engineer · CISSP \n' +
       ' Looking under the hood? Good instinct. \n' +
       ' geniesolostech@gmail.com',
       'background:#7C3AED;color:#FAF5EC;font-weight:700;padding:4px 8px;border-radius:4px 0 0 4px',

@@ -1,12 +1,12 @@
 /* ═══════════════════════════════════════════════════════════════
-   Minimal QR Code encoder — byte mode, single-block versions only.
+   Minimal QR Code encoder: byte mode, single-block versions only.
 
    Written by hand rather than pulled from a CDN so the card stays a
    self-contained, offline-renderable artifact.
 
    Scope is deliberately narrow: only the (version, ECC) pairs that use
-   ONE error-correction block, which removes block-interleaving entirely
-   — the single most bug-prone part of a QR encoder. That still covers
+   ONE error-correction block, which removes block-interleaving entirely,
+   the single most bug-prone part of a QR encoder. That still covers
    up to ~106 characters, far more than any URL on a business card.
 
    Exposes GSQR.svg(text, opts) and GSQR.matrix(text) plus GSQR._test()
@@ -212,7 +212,7 @@
   function penalty(m, size) {
     let score = 0;
 
-    /* rule 1 — runs of 5 or more */
+    /* rule 1: runs of 5 or more */
     for (let i = 0; i < size; i++) {
       for (const horiz of [true, false]) {
         let run = 1;
@@ -226,7 +226,7 @@
       }
     }
 
-    /* rule 2 — 2x2 blocks of one colour */
+    /* rule 2: 2x2 blocks of one colour */
     for (let r = 0; r < size - 1; r++) {
       for (let c = 0; c < size - 1; c++) {
         const v = m[r][c];
@@ -234,7 +234,7 @@
       }
     }
 
-    /* rule 3 — finder-like 1:1:3:1:1 patterns with a 4-module gap */
+    /* rule 3: finder-like 1:1:3:1:1 patterns with a 4-module gap */
     const A = [1, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0];
     const B = [0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 1];
     const match = (get, start) => {
@@ -253,7 +253,7 @@
       }
     }
 
-    /* rule 4 — deviation from an even split of dark and light */
+    /* rule 4: deviation from an even split of dark and light */
     let dark = 0;
     for (let r = 0; r < size; r++) for (let c = 0; c < size; c++) if (m[r][c]) dark++;
     const pct = (dark * 100) / (size * size);
@@ -380,8 +380,8 @@
     ok('dark module', grid[size - 8][8] === 1);
 
     /* Round-trip: unmask and re-read the data modules in placement order.
-       This is the strongest available check without an optical scanner —
-       it verifies placement, the mask, and the mask's own record in the
+       This is the strongest available check without an optical scanner,
+       and it verifies placement, the mask, and the mask's own record in the
        format bits all agree. */
     ok('round-trip decode', (() => {
       const { fixed } = buildFunctionPatterns(cfg);

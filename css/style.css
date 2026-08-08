@@ -1,9 +1,9 @@
 /* ═══════════════════════════════════════════════════════════════
-   GENIESOLOS — Gene Garland portfolio
-   Art direction: "sunroom studio" — a warm cream canvas with
+   GENIESOLOS: Gene Garland portfolio
+   Art direction: "sunroom studio", a warm cream canvas with
    confident bursts of saturated green, sun-yellow and violet.
    Peaceful AND vibrant: air, blobs, soft shadows, joyful color.
-   The cyber artifacts (boot, terminal, glitch) stay — reimagined
+   The cyber artifacts (boot, terminal, glitch) stay, reimagined
    as bright, friendly objects that live happily in the light.
    Type: Space Grotesk (voice) · Fraunces (soul) · JetBrains Mono (craft)
    ═══════════════════════════════════════════════════════════════ */
@@ -13,34 +13,34 @@
   color-scheme: light;
 
   /* canvas + surfaces */
-  --cream:    #FAF5EC;   /* page canvas — warm, not white          */
-  --cream-2:  #F4ECDD;   /* deeper cream — bars, tracks, term bar  */
+  --cream:    #FAF5EC;   /* page canvas: warm, not white          */
+  --cream-2:  #F4ECDD;   /* deeper cream: bars, tracks, term bar  */
   --band:     #F6EFE1;   /* alt-section band                       */
-  --paper:    #FFFDF8;   /* cards — warm paper, softer than white  */
+  --paper:    #FFFDF8;   /* cards: warm paper, softer than white  */
 
   /* ink */
-  --ink:      #292437;   /* deep plum-charcoal — headings, strong  */
+  --ink:      #292437;   /* deep plum-charcoal: headings, strong  */
   --ink-2:    #4E4760;   /* body secondary                         */
   --muted:    #6E6680;   /* small labels (still ≥4.5:1 on cream)   */
 
-  /* green — growth, calm confidence */
+  /* green: growth, calm confidence */
   --green:        #17A15E;
   --green-deep:   #0C7A46;   /* text-safe green                    */
   --green-bright: #2ED47F;   /* fills, shapes, gradients           */
 
-  /* yellow — joy. Fills and shapes ONLY, never small text        */
+  /* yellow: joy. Fills and shapes ONLY, never small text        */
   --sun:        #FFC933;
   --sun-bright: #FFD23F;
   --amber:      #F0A31A;
   --amber-deep: #8A5A00;     /* the text-safe voice of yellow      */
 
-  /* purple — imagination, depth */
+  /* purple: imagination, depth */
   --violet:        #7C3AED;  /* text-safe on cream (≈5.4:1)        */
   --violet-deep:   #5B21B6;
   --violet-bright: #A78BFA;  /* fills, shapes, gradients           */
   --lilac:         #EDE6FB;
 
-  /* lines + shadows — warm and soft, never harsh */
+  /* lines + shadows: warm and soft, never harsh */
   --line:      rgba(41, 36, 55, .12);
   --line-soft: rgba(41, 36, 55, .07);
 
@@ -71,7 +71,7 @@
   --blob-c: 52% 48% 42% 58% / 45% 52% 55% 48%;
 }
 
-/* Same ramp in a perceptual space where supported — see .hero__name .accent.
+/* Same ramp in a perceptual space where supported. See .hero__name .accent.
    Scoped to @supports rather than redeclared, because an unparseable value
    in a custom property fails at use time and would blank the clipped text. */
 @supports (background: linear-gradient(in oklch, red, blue)) {
@@ -116,7 +116,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   border-radius: 6px;
 }
 
-/* Custom scrollbar — light, friendly */
+/* Custom scrollbar: light, friendly */
 ::-webkit-scrollbar { width: 11px; height: 11px; }
 ::-webkit-scrollbar-track { background: var(--cream-2); }
 ::-webkit-scrollbar-thumb {
@@ -137,7 +137,7 @@ html { scrollbar-color: var(--violet-bright) var(--cream-2); }
 .skip:focus { top: 14px; }
 
 /* ── Ambient layers ─────────────────────────────────────────── */
-/* particle canvas — colorful threads drifting over cream        */
+/* particle canvas: colorful threads drifting over cream        */
 .fx {
   position: fixed; inset: 0;
   width: 100%; height: 100%;
@@ -145,9 +145,9 @@ html { scrollbar-color: var(--violet-bright) var(--cream-2); }
   opacity: .9;
 }
 
-/* soft color washes — the "air" of the page */
+/* soft color washes: the "air" of the page */
 /* Kept deliberately faint. These are fixed to the viewport, so every
-   section sees the same wash — anything stronger stops reading as light
+   section sees the same wash, anything stronger stops reading as light
    and starts reading as a dingy tint over the whole page. */
 .vignette {
   position: fixed; inset: 0; z-index: 1; pointer-events: none;
@@ -168,7 +168,7 @@ html { scrollbar-color: var(--violet-bright) var(--cream-2); }
   );
 }
 
-/* pointer aura — a wandering patch of violet-gold light */
+/* pointer aura: a wandering patch of violet-gold light */
 .cursor-glow {
   position: fixed; top: 0; left: 0; z-index: 3;
   width: 440px; height: 440px; margin: -220px 0 0 -220px;
@@ -189,7 +189,7 @@ body.has-pointer .cursor-glow { opacity: 1; }
   border-radius: 0 3px 3px 0;
 }
 
-/* ── Boot sequence — a graceful good-morning, not a BIOS ────── */
+/* ── Boot sequence: a graceful good-morning, not a BIOS ─────── */
 .boot {
   position: fixed; inset: 0; z-index: 200;
   display: grid; place-items: center;
@@ -385,7 +385,7 @@ main { position: relative; z-index: 4; }
   align-self: center;
 }
 .shead__num::before { content: '//'; color: var(--green-deep); margin-right: 6px; }
-/* The whole heading speaks in one voice — Fraunces italic in violet.
+/* The whole heading speaks in one voice: Fraunces italic in violet.
    Previously only the <em> word did, which left every section title
    split between two typefaces and two colours. */
 .shead__title {
@@ -471,7 +471,7 @@ main { position: relative; z-index: 4; }
   overflow: hidden;
 }
 
-/* big joyful blob, top right — sun into green */
+/* big joyful blob, top right: sun into green */
 .hero::before {
   content: ''; position: absolute; z-index: 0; pointer-events: none;
   top: -170px; right: -150px;
@@ -482,7 +482,7 @@ main { position: relative; z-index: 4; }
   animation: blobMorph 24s ease-in-out infinite;
 }
 
-/* a slow dashed halo — the one ring this engineer will admit to */
+/* a slow dashed halo: the one ring this engineer will admit to */
 .hero::after {
   content: ''; position: absolute; z-index: 0; pointer-events: none;
   left: clamp(-60px, 4vw, 120px); top: 16%;
@@ -598,7 +598,7 @@ main { position: relative; z-index: 4; }
 
 @keyframes fadeUp { from { opacity: 0; transform: translateY(26px); } }
 
-/* Stats — four little celebration cards */
+/* Stats: four little celebration cards */
 .stats {
   display: grid; grid-template-columns: repeat(4, 1fr);
   gap: clamp(12px, 1.6vw, 18px);
@@ -660,7 +660,7 @@ main { position: relative; z-index: 4; }
 }
 @keyframes wheel { 50% { transform: translateY(10px); opacity: .25; } }
 
-/* ── Marquee — a ribbon of pure brand color ─────────────────── */
+/* ── Marquee: a ribbon of pure brand color ──────────────────── */
 .marquee {
   position: relative; z-index: 5;
   overflow: hidden; padding: 16px 0;
@@ -727,7 +727,7 @@ main { position: relative; z-index: 4; }
 .portrait__tag span { color: var(--violet); font-weight: 700; }
 .portrait__tag .ok { color: var(--green-deep); margin-left: auto; }
 
-/* Terminal — a sunny little code editor, not a hacker's den */
+/* Terminal: a sunny little code editor, not a hacker's den */
 .term {
   border: 1px solid var(--line-soft); border-radius: var(--r);
   background: var(--paper);
@@ -894,7 +894,7 @@ main { position: relative; z-index: 4; }
   margin-top: 7px; letter-spacing: .04em;
 }
 
-/* the CISSP — one big warm card wearing a gradient ribbon */
+/* the CISSP: one big warm card wearing a gradient ribbon */
 .cert--hero {
   border: 2px solid transparent;
   border-radius: var(--r-lg);
@@ -952,7 +952,7 @@ main { position: relative; z-index: 4; }
 }
 .proj:hover { border-color: rgba(124, 58, 237, .26); box-shadow: var(--shadow-lg); }
 
-/* pointer-following light — a patch of violet sunshine */
+/* pointer-following light: a patch of violet sunshine */
 .proj__glow {
   position: absolute; width: 380px; height: 380px; border-radius: 50%;
   background: radial-gradient(circle, rgba(124, 58, 237, .12), rgba(255, 201, 51, .07) 45%, transparent 66%);
@@ -1132,7 +1132,7 @@ main { position: relative; z-index: 4; }
 }
 .contact__links em { color: var(--amber-deep); font-style: normal; }
 
-/* ── Footer — a deep plum evening to close the sunny page ───── */
+/* ── Footer: a deep plum evening to close the sunny page ────── */
 .foot {
   position: relative; z-index: 4; overflow: hidden;
   background: #241F35;
@@ -1285,7 +1285,7 @@ main { position: relative; z-index: 4; }
 .themetog__ico--moon { opacity: 0; transform: rotate(-50deg) scale(.5); }
 
 /* ═══════════════════════════════════════════════════════════════
-   DARK THEME — the original "cyber terminal" art direction.
+   DARK THEME: the original "cyber terminal" art direction.
    Black canvas, phosphor green, acid lime, amber. Set by the toggle
    as [data-theme="dark"] on <html>.
 
@@ -1310,18 +1310,18 @@ main { position: relative; z-index: 4; }
   --ink-2: #a9c3b6;
   --muted: #7d9488;
 
-  /* green — on black, the bright value IS the readable one */
+  /* green: on black, the bright value IS the readable one */
   --green:        #00ff9c;
   --green-deep:   #00ff9c;
   --green-bright: #00ff9c;
 
-  /* yellow — no longer needs a darkened text variant */
+  /* yellow: no longer needs a darkened text variant */
   --sun:        #ffd60a;
   --sun-bright: #ffe14d;
   --amber:      #ffb703;
   --amber-deep: #ffd60a;
 
-  /* the purple family becomes acid lime — this is what converts the
+  /* the purple family becomes acid lime, and this is what converts the
      whole design in one move, since violet carries most accents */
   --violet:        #b6ff3a;
   --violet-deep:   #d2ff7d;
@@ -1340,7 +1340,7 @@ main { position: relative; z-index: 4; }
   --grad-brand: linear-gradient(100deg, var(--green), var(--violet) 50%, var(--sun));
   --grad-text:  linear-gradient(100deg, var(--green), var(--violet) 55%, var(--sun));
 
-  /* sharper corners — the cyber build was harder-edged than the sunroom */
+  /* sharper corners: the cyber build was harder-edged than the sunroom */
   --r: 14px;
   --r-lg: 18px;
 }
@@ -1469,7 +1469,7 @@ main { position: relative; z-index: 4; }
   background: linear-gradient(180deg, var(--violet), var(--green));
   box-shadow: 0 0 10px rgba(182, 255, 58, .6);
 }
-/* the highlighter pen doesn't exist on black — underline in phosphor instead */
+/* the highlighter pen doesn't exist on black, so underline in phosphor instead */
 :root[data-theme="dark"] .hero__blurb strong {
   background: linear-gradient(180deg, transparent 92%, rgba(0, 255, 156, .55) 92%);
 }
@@ -1484,7 +1484,7 @@ main { position: relative; z-index: 4; }
   -webkit-background-clip: text; background-clip: text; color: transparent;
 }
 
-/* ── marquee — stays a bright ribbon, so its text must stay dark ── */
+/* ── marquee: stays a bright ribbon, so its text must stay dark ─── */
 :root[data-theme="dark"] .marquee {
   background: linear-gradient(90deg, var(--green), var(--violet) 46%, var(--sun));
   box-shadow: 0 18px 40px -20px rgba(0, 255, 156, .35);
@@ -1615,7 +1615,7 @@ main { position: relative; z-index: 4; }
 .nf__text { color: var(--ink-2); max-width: 46ch; }
 .nf .btn { margin-top: 10px; }
 
-/* ── Still mode (?still=1) — settled page for screenshots ───── */
+/* ── Still mode (?still=1): settled page for screenshots ────── */
 .still { scroll-behavior: auto !important; }
 .still *, .still *::before, .still *::after {
   animation: none !important;

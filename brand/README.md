@@ -1,4 +1,4 @@
-# Brand assets — Stripe
+# Brand assets for Stripe
 
 Derived from the hexagon mark in the site navigation.
 
@@ -30,18 +30,18 @@ Go to **Dashboard → Settings → Branding** (`dashboard.stripe.com/account/bra
 
 ## Where each setting actually shows up
 
-From Stripe's own documentation — worth knowing, because the icon does far more work than
+From Stripe's own documentation, and worth knowing, because the icon does far more work than
 the logo:
 
 | Setting | Emails | Checkout | Customer portal | Invoice page | Invoice PDF |
 |---|---|---|---|---|---|
 | Icon | yes | yes | yes | yes | yes |
-| Logo | — | yes | — | — | yes |
-| Brand color | yes | — | yes | yes | yes |
-| Accent color | yes *(background)* | yes | yes | yes | — |
+| Logo | no | yes | no | no | yes |
+| Brand color | yes | no | yes | yes | yes |
+| Accent color | yes *(background)* | yes | yes | yes | no |
 
 **The icon appears on every surface; the logo only overrides it in two.** That is why the
-icon is a solid tile rather than the site's thin outline — line art that reads beautifully
+icon is a solid tile rather than the site's thin outline. Line art that reads beautifully
 at 26px in the nav goes faint and spindly when Stripe renders it as a small avatar in an
 email header. The solid version holds up.
 
@@ -53,7 +53,7 @@ which some Stripe surfaces do.
 ## Why these two colors
 
 **Brand `#7C3AED`** is the exact violet of the nav mark and the site's section headings.
-White text on it measures **5.7:1** contrast, clearing WCAG AA for normal text — which
+White text on it measures **5.7:1** contrast, clearing WCAG AA for normal text, which
 matters because Stripe puts it behind white type on buttons and invoice headers.
 
 **Accent `#FAF5EC`** is the site's page background, reused deliberately. Stripe uses the
@@ -68,7 +68,7 @@ If you ever change these, check the accent against Stripe's dark body text befor
 
 ## The logo has a transparent background
 
-Verified — corner pixel alpha is 0. It composites cleanly on white Checkout pages and on
+Verified: corner pixel alpha is 0. It composites cleanly on white Checkout pages and on
 the cream accent alike. There is no baked-in white box that would show as a rectangle over
 a tinted surface.
 
@@ -99,4 +99,4 @@ $exe = "C:\Program Files\Google\Chrome\Application\chrome.exe"
 `--default-background-color=00000000` is what produces the transparency; without it the
 logo gets an opaque white background.
 
-These files are excluded from the website deploy — they are brand source, not site content.
+These files are excluded from the website deploy, because they are brand source, not site content.
