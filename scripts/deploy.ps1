@@ -40,6 +40,12 @@ $Region         = 'us-east-1'
 $SiteUrl        = 'https://geniesolos.com/'
 $HtmlFiles      = @('index.html', '404.html')
 
+# $Region is passed explicitly to every AWS call below. Without it the CLI
+# falls back to whatever region the active profile happens to be configured
+# for, so this script would silently target the wrong place on another
+# machine. CloudFront is global and always served from us-east-1, so the flag
+# is a no-op there, but passing it everywhere keeps the calls consistent.
+
 # Default-DENY. Everything is excluded, then site paths are added back.
 #
 # The previous blacklist approach published anything new in the repo unless
@@ -77,15 +83,15 @@ try {
         throw "AWS CLI not found on PATH. Install it or run the GitHub Actions workflow instead."
     }
 
-    $ident = aws sts get-caller-identity --output json 2>&1 | ConvertFrom-Json
+    $ident = aws sts get-caller-identity --region $Region --output json 2>&1 | ConvertFrom-Json
     if ($LASTEXITCODE -ne 0) { throw "AWS credentials are not working. Run 'aws configure'." }
     Ok "account $($ident.Account) as $(($ident.Arn -split '/')[-1])"
 
-    aws s3api head-bucket --bucket $Bucket 2>&1 | Out-Null
-    if ($LASTEXITCODE -ne 0) { throw "Cannot reach bucket '$Bucket'." }
-    $distStatus = aws cloudfront get-distribution --id $DistributionId --query 'Distribution.Status' --output text 2>&1
+    aws s3api head-bucket --bucket $Bucket --region $Region 2>&1 | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "Cannot reach bucket '$Bucket' in $Region." }
+    $distStatus = aws cloudfront get-distribution --id $DistributionId --region $Region --query 'Distribution.Status' --output text 2>&1
     if ($LASTEXITCODE -ne 0) { throw "Cannot reach CloudFront distribution '$DistributionId'." }
-    Ok "bucket reachable, distribution $DistributionId is $distStatus"
+    Ok "bucket reachable in $Region, distribution $DistributionId is $distStatus"
 
     foreach ($f in $HtmlFiles) {
         if (-not (Test-Path (Join-Path $RepoRoot $f))) { throw "Missing expected file: $f" }
@@ -137,7 +143,7 @@ try {
     # meant a JS fix could not reach a returning visitor for a week, because an
     # invalidation clears the edge but never the browser. Browsers now
     # revalidate every 5 minutes while the edge still caches for a week.
-    $syncArgs = @('s3', 'sync', '.', "s3://$Bucket", '--delete') + $SyncFilters +
+    $syncArgs = @('s3', 'sync', '.', "s3://$Bucket", '--delete', '--region', $Region) + $SyncFilters +
                 @('--cache-control', 'public, max-age=300, s-maxage=604800')
     if ($DryRun) { $syncArgs += '--dryrun' }
     aws @syncArgs
@@ -150,7 +156,7 @@ try {
     # Last, and never long-cached, so a browser cannot pair a fresh stylesheet
     # with a stale document.
     foreach ($f in $HtmlFiles) {
-        $cpArgs = @('s3', 'cp', $f, "s3://$Bucket/$f",
+        $cpArgs = @('s3', 'cp', $f, "s3://$Bucket/$f", '--region', $Region,
                     '--cache-control', 'public, max-age=0, must-revalidate',
                     '--content-type', 'text/html; charset=utf-8')
         if ($DryRun) { $cpArgs += '--dryrun' }
@@ -168,10 +174,11 @@ try {
     } else {
         Step 6 'Invalidating CloudFront'
         $invId = aws cloudfront create-invalidation --distribution-id $DistributionId `
-                   --paths '/*' --query 'Invalidation.Id' --output text
+                   --region $Region --paths '/*' --query 'Invalidation.Id' --output text
         if ($LASTEXITCODE -ne 0) { throw "could not create invalidation" }
         Ok "invalidation $invId created, waiting..."
-        aws cloudfront wait invalidation-completed --distribution-id $DistributionId --id $invId
+        aws cloudfront wait invalidation-completed --distribution-id $DistributionId `
+            --region $Region --id $invId
         if ($LASTEXITCODE -ne 0) { Warn "waiter returned non-zero; the invalidation may still be in progress" }
         else { Ok 'invalidation complete' }
     }
