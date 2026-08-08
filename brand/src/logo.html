@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>GenieSolos logo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+<style>
+  /* Transparent background: Stripe composites the logo on light surfaces,
+     and a baked-in white box would show as a rectangle on any tint. */
+  /* Cropped close to the artwork. Stripe scales the logo to fit its
+     container, so empty margin baked into the file just makes the mark
+     render smaller than it needs to. */
+  html, body {
+    margin: 0; padding: 0; width: 1024px; height: 208px;
+    overflow: hidden; background: transparent;
+  }
+  .lockup {
+    width: 1024px; height: 208px;
+    display: flex; align-items: center; justify-content: center;
+    gap: 40px;
+  }
+  .mark { flex: none; }
+  .word {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 84px;
+    letter-spacing: .18em;
+    /* Same ramp as the site wordmark. Both ends stay dark enough to read
+       on white; oklch keeps it from sagging to grey through the middle. */
+    background: linear-gradient(100deg, #0C7A46, #17A15E 26%, #7C3AED 92%);
+    background: linear-gradient(100deg in oklch, #0C7A46, #17A15E 26%, #7C3AED 92%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    /* letter-spacing adds trailing space after the last glyph */
+    margin-right: -.18em;
+    line-height: 1;
+  }
+</style></head>
+<body>
+  <div class="lockup">
+    <svg class="mark" width="168" height="168" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+      <rect width="512" height="512" rx="96" fill="#7C3AED"/>
+      <g transform="translate(112,103) scale(9)">
+        <path d="M16 2 29 9.5v15L16 32 3 24.5v-15Z"
+              fill="none" stroke="#FAF5EC" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M16 9v7l6 3.5"
+              fill="none" stroke="#FAF5EC" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="16" cy="16" r="2.1" fill="#FAF5EC"/>
+      </g>
+    </svg>
+    <span class="word">GENIESOLOS</span>
+  </div>
+</body></html>

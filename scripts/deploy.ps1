@@ -40,11 +40,25 @@ $Region         = 'us-east-1'
 $SiteUrl        = 'https://geniesolos.com/'
 $HtmlFiles      = @('index.html', '404.html')
 
-# MUST stay identical to the exclude list in .github/workflows/deploy.yml.
-# Both deployers run `s3 sync --delete`; if the lists diverge, each will
-# delete what the other uploads and the site will flip between states
-# depending on which ran last. The drift check below guards against that.
-$Excludes = @('.git/*', '.github/*', 'card/*', 'scripts/*', '*.md', '.nojekyll', '*.html')
+# Default-DENY. Everything is excluded, then site paths are added back.
+#
+# The previous blacklist approach published anything new in the repo unless
+# someone remembered to add an exclude for it - a .vscode/mcp.json appeared
+# and would have gone straight onto the public site. A whitelist means a
+# stray .env, note, or config is never published by accident.
+#
+# Order matters to `aws s3 sync`: filters apply in sequence, so --exclude "*"
+# must come first. MUST stay identical to .github/workflows/deploy.yml -
+# both run --delete, so divergence makes each undo the other. The drift
+# check below compares the two sequences on every run.
+$SyncFilters = @(
+    '--exclude', '*',
+    '--include', 'css/*',
+    '--include', 'js/*',
+    '--include', 'assets/*',
+    '--include', 'robots.txt',
+    '--include', 'sitemap.xml'
+)
 
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 Push-Location $RepoRoot
@@ -82,19 +96,18 @@ try {
 
     $wf = Join-Path $RepoRoot '.github\workflows\deploy.yml'
     if (Test-Path $wf) {
-        $wfExcludes = [regex]::Matches((Get-Content $wf -Raw), '--exclude\s+"([^"]+)"') |
-                      ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique
-        $mine = $Excludes | Sort-Object -Unique
-        $diff = Compare-Object $wfExcludes $mine
-        if ($diff) {
-            Warn "Exclude lists DIFFER from .github/workflows/deploy.yml:"
-            foreach ($d in $diff) {
-                $where = if ($d.SideIndicator -eq '<=') { 'workflow only' } else { 'this script only' }
-                Warn "  $($d.InputObject)  [$where]"
-            }
-            Warn "Both use --delete, so they will fight and undo each other. Reconcile them."
-        } else { Ok "exclude lists match ($($mine.Count) patterns)" }
-    } else { Warn "workflow not found, skipping drift check" }
+        # Compared as an ordered sequence, not a set: aws s3 sync applies
+        # filters in order, so the same patterns in a different order can
+        # produce a different result.
+        $wfFilters = [regex]::Matches((Get-Content $wf -Raw), '--(exclude|include)\s+"([^"]+)"') |
+                     ForEach-Object { "--$($_.Groups[1].Value)"; $_.Groups[2].Value }
+        if (($wfFilters -join ' ') -ne ($SyncFilters -join ' ')) {
+            Warn 'Sync filters DIFFER from .github/workflows/deploy.yml:'
+            Warn "  workflow : $($wfFilters -join ' ')"
+            Warn "  script   : $($SyncFilters -join ' ')"
+            Warn 'Both use --delete, so they will fight and undo each other. Reconcile them.'
+        } else { Ok "sync filters match ($(($SyncFilters.Count)/2) rules, in order)" }
+    } else { Warn 'workflow not found, skipping drift check' }
 
     # ---------------------------------------------------------------- 3
     Step 3 'Working tree state'
@@ -120,9 +133,8 @@ try {
     # ---------------------------------------------------------------- 4
     Step 4 'Syncing static assets (7-day cache)'
 
-    $syncArgs = @('s3', 'sync', '.', "s3://$Bucket", '--delete')
-    foreach ($e in $Excludes) { $syncArgs += @('--exclude', $e) }
-    $syncArgs += @('--cache-control', 'public, max-age=604800')
+    $syncArgs = @('s3', 'sync', '.', "s3://$Bucket", '--delete') + $SyncFilters +
+                @('--cache-control', 'public, max-age=604800')
     if ($DryRun) { $syncArgs += '--dryrun' }
     aws @syncArgs
     if ($LASTEXITCODE -ne 0) { throw "s3 sync failed" }

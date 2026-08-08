@@ -51,14 +51,18 @@ jobs:
       # the invalidation below clears the edge on every deploy.
       - name: Sync assets
         run: |
+          # Default-DENY: exclude everything, then add back only site paths.
+          # A blacklist published anything new in the repo unless someone
+          # remembered to exclude it. Order matters - "*" must come first.
+          # Keep identical to $SyncFilters in scripts/deploy.ps1; both run
+          # --delete, so divergence makes each undo the other.
           aws s3 sync . "s3://$BUCKET" --delete \
-            --exclude ".git/*" \
-            --exclude ".github/*" \
-            --exclude "card/*" \
-            --exclude "scripts/*" \
-            --exclude "*.md" \
-            --exclude ".nojekyll" \
-            --exclude "*.html" \
+            --exclude "*" \
+            --include "css/*" \
+            --include "js/*" \
+            --include "assets/*" \
+            --include "robots.txt" \
+            --include "sitemap.xml" \
             --cache-control "public, max-age=604800"
 
       # HTML last, and always revalidated, so a browser never pairs a new
