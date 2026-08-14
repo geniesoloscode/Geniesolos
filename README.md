@@ -25,6 +25,7 @@ meta tags at the top of `index.html`.
 
 ```
 index.html          all content and page structure
+terms.html          service terms (self-contained, served at /terms)
 css/style.css       the entire visual design, both themes
 js/main.js          boot sequence, canvases, theme toggle, scroll behavior
 assets/

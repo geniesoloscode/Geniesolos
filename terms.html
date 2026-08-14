@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Service Terms | GenieSolos Tech</title>
+<meta name="description" content="Service terms for GenieSolos Tech managed services: plans and pricing, response times, billing, cancellation and refunds, website ownership, and support scope.">
+<meta name="author" content="Gene Garland">
+<link rel="canonical" href="https://geniesolos.com/terms">
+<meta name="theme-color" content="#FAF5EC" id="themeColor">
+
+<!-- Applies the saved theme before first paint, same as the homepage,
+     so a dark-theme visitor never eats a cream flash. -->
+<script>
+(function () {
+  var pick = null;
+  var q = /[?&]theme=(dark|light)\b/.exec(location.search);
+  if (q) { pick = q[1]; }
+  else {
+    try { pick = localStorage.getItem('gs-theme'); } catch (e) { /* private mode */ }
+  }
+  if (pick === 'dark') {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    var m = document.getElementById('themeColor');
+    if (m) m.setAttribute('content', '#060807');
+  }
+})();
+</script>
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="Service Terms | GenieSolos Tech">
+<meta property="og:description" content="The terms that govern GenieSolos Tech managed services: plans, response times, billing, cancellation, and ownership.">
+<meta property="og:url" content="https://geniesolos.com/terms">
+<meta property="og:image" content="https://geniesolos.com/assets/og-card.png">
+
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/favicon.svg">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400;1,9..144,600&family=JetBrains+Mono:wght@300;400;500;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- Styles are inline on purpose. This page shares the site's design tokens
+     but none of the homepage's structure (boot, canvas, sections), so linking
+     css/style.css would couple a legal document to portfolio markup and its
+     cache-busting cycle. The tokens below are copied verbatim from style.css;
+     if the site palette ever changes, update both. -->
+<style>
+/* ── Tokens (mirrored from css/style.css) ───────────────────── */
+:root {
+  color-scheme: light;
+
+  --cream:    #FAF5EC;
+  --cream-2:  #F4ECDD;
+  --band:     #F6EFE1;
+  --paper:    #FFFDF8;
+
+  --ink:      #292437;
+  --ink-2:    #4E4760;
+  --muted:    #6E6680;
+
+  --green:        #17A15E;
+  --green-deep:   #0C7A46;
+  --green-bright: #2ED47F;
+
+  --sun:        #FFC933;
+  --sun-bright: #FFD23F;
+  --amber-deep: #8A5A00;
+
+  --violet:        #7C3AED;
+  --violet-deep:   #5B21B6;
+  --violet-bright: #A78BFA;
+  --lilac:         #EDE6FB;
+
+  --line:      rgba(41, 36, 55, .12);
+  --line-soft: rgba(41, 36, 55, .07);
+
+  --shadow-sm: 0 2px 8px rgba(70, 56, 110, .05), 0 12px 26px -16px rgba(70, 56, 110, .14);
+  --shadow-md: 0 4px 14px rgba(70, 56, 110, .07), 0 24px 48px -22px rgba(70, 56, 110, .20);
+
+  --grad-text: linear-gradient(105deg, var(--green-deep), var(--green) 30%, var(--violet) 88%);
+
+  --mono:  'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --sans:  'Space Grotesk', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --serif: 'Fraunces', Georgia, 'Times New Roman', serif;
+
+  --nav-h: 70px;
+  --r: 20px;
+
+  --ease: cubic-bezier(.22, 1, .36, 1);
+}
+
+@supports (background: linear-gradient(in oklch, red, blue)) {
+  :root {
+    --grad-text: linear-gradient(105deg in oklch, var(--green-deep), var(--green) 26%, var(--violet) 92%);
+  }
+}
+
+/* Dark theme: the cyber-terminal remap, same values as the homepage. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --cream:   #060807;
+  --cream-2: #0d1310;
+  --band:    #0a0f0c;
+  --paper:   #0c1310;
+
+  --ink:   #e6f4ec;
+  --ink-2: #a9c3b6;
+  --muted: #7d9488;
+
+  --green:        #00ff9c;
+  --green-deep:   #00ff9c;
+  --green-bright: #00ff9c;
+
+  --sun:        #ffd60a;
+  --sun-bright: #ffe14d;
+  --amber-deep: #ffd60a;
+
+  --violet:        #b6ff3a;
+  --violet-deep:   #d2ff7d;
+  --violet-bright: #b6ff3a;
+  --lilac:         rgba(182, 255, 58, .13);
+
+  --line:      rgba(0, 255, 156, .2);
+  --line-soft: rgba(0, 255, 156, .13);
+
+  --shadow-sm: 0 2px 10px rgba(0, 0, 0, .5),  0 0 0 1px rgba(0, 255, 156, .04);
+  --shadow-md: 0 8px 26px rgba(0, 0, 0, .58), 0 0 22px -6px rgba(0, 255, 156, .18);
+
+  --grad-text: linear-gradient(100deg, var(--green), var(--violet) 55%, var(--sun));
+
+  --r: 14px;
+}
+
+/* ── Reset ──────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+* { margin: 0; padding: 0; }
+
+html {
+  background: var(--cream);
+  scroll-behavior: smooth;
+  scroll-padding-top: calc(var(--nav-h) + 18px);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--cream);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: clamp(15px, .55vw + 13.6px, 17px);
+  line-height: 1.7;
+  accent-color: var(--violet);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+img, svg { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+
+::selection { background: var(--violet); color: #FBF7EF; }
+
+:focus-visible {
+  outline: 3px solid var(--violet);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.skip {
+  position: fixed; top: -100px; left: 16px; z-index: 999;
+  background: var(--violet); color: #fff;
+  padding: 10px 18px; border-radius: 999px; font-weight: 700;
+  box-shadow: var(--shadow-md);
+  transition: top .2s;
+}
+.skip:focus { top: 14px; }
+:root[data-theme="dark"] .skip { color: #04120b; }
+
+/* ── Nav: same bar as the homepage, translucent from the start ── */
+.nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+  height: var(--nav-h);
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 20px;
+  padding: 0 clamp(16px, 4vw, 42px);
+  background: rgba(250, 245, 236, .86);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  border-bottom: 1px solid var(--line-soft);
+  box-shadow: 0 14px 34px -22px rgba(70, 56, 110, .22);
+}
+:root[data-theme="dark"] .nav {
+  background: rgba(6, 8, 7, .82);
+  box-shadow: 0 14px 34px -22px rgba(0, 0, 0, .8);
+}
+
+.nav__brand { display: flex; align-items: center; gap: 10px; }
+.nav__mark { color: var(--violet); display: grid; place-items: center; }
+.nav__mark svg { animation: spinSlow 24s linear infinite; }
+@keyframes spinSlow { to { transform: rotate(360deg); } }
+
+.nav__name {
+  font-family: var(--mono);
+  font-weight: 700; font-size: 13.5px; letter-spacing: .2em;
+  background: var(--grad-text);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+
+.nav__end { display: flex; align-items: center; gap: 14px; }
+
+.nav__back {
+  font-family: var(--mono); font-size: 12.5px; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--ink-2);
+  padding: 9px 14px; border-radius: 999px;
+  transition: color .25s, background .25s;
+}
+.nav__back:hover { color: var(--violet); background: rgba(124, 58, 237, .07); }
+:root[data-theme="dark"] .nav__back:hover { background: rgba(0, 255, 156, .08); }
+
+/* theme toggle, same control as the homepage */
+.themetog {
+  position: relative; flex: none;
+  width: 58px; height: 30px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--cream-2);
+  transition: border-color .25s, box-shadow .25s;
+}
+.themetog:hover { border-color: var(--violet); box-shadow: 0 0 0 4px rgba(124, 58, 237, .1); }
+.themetog__thumb {
+  position: absolute; top: 3px; left: 3px;
+  width: 22px; height: 22px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: linear-gradient(135deg, var(--sun), var(--sun-bright));
+  color: #6b4d00;
+  transition: transform .35s var(--ease), background .35s;
+}
+.themetog__ico { position: absolute; transition: opacity .25s, transform .35s var(--ease); }
+.themetog__ico--moon { opacity: 0; transform: rotate(-50deg) scale(.5); }
+:root[data-theme="dark"] .themetog__thumb {
+  transform: translateX(28px);
+  background: linear-gradient(135deg, var(--green), var(--violet));
+  color: #04120b;
+  box-shadow: 0 0 14px rgba(0, 255, 156, .5);
+}
+:root[data-theme="dark"] .themetog__ico--sun  { opacity: 0; transform: rotate(50deg) scale(.5); }
+:root[data-theme="dark"] .themetog__ico--moon { opacity: 1; transform: none; }
+:root[data-theme="dark"] .themetog:hover { box-shadow: 0 0 0 4px rgba(0, 255, 156, .12); }
+
+/* ── Document plate: the official cover block ───────────────── */
+.plate {
+  max-width: 1060px;
+  margin: calc(var(--nav-h) + clamp(40px, 8vw, 76px)) auto 0;
+  padding: 0 clamp(18px, 4vw, 42px);
+}
+
+.plate__mark {
+  display: flex; align-items: center; gap: 14px;
+  color: var(--violet);
+  font-family: var(--mono); font-weight: 700;
+  font-size: 12.5px; letter-spacing: .3em; text-transform: uppercase;
+}
+.plate__mark .rule { flex: 1; height: 1px; background: var(--line); }
+
+.plate h1 {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: clamp(38px, 7vw, 72px);
+  line-height: 1.05;
+  letter-spacing: -.015em;
+  margin: 22px 0 10px;
+}
+.plate h1 em {
+  font-style: italic;
+  background: var(--grad-text);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+
+.plate__lede {
+  max-width: 62ch;
+  color: var(--ink-2);
+  font-size: clamp(15.5px, 1.4vw, 18px);
+}
+.plate__lede b { color: var(--ink); }
+
+/* the metadata strip: a spec sheet, not a subtitle */
+.plate__meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 0 26px;
+  margin: clamp(26px, 4vw, 40px) 0 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.plate__meta div {
+  padding: 14px 0 16px;
+  font-family: var(--mono);
+}
+.plate__meta dt {
+  font-size: 10.5px; letter-spacing: .22em; text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.plate__meta dd { font-size: 13px; color: var(--ink); font-weight: 500; }
+.plate__meta dd a { color: var(--violet); }
+.plate__meta dd a:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+/* ── Document body: sticky contents + measure ───────────────── */
+.doc {
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: clamp(34px, 6vw, 64px) clamp(18px, 4vw, 42px) clamp(60px, 8vw, 96px);
+  display: grid;
+  grid-template-columns: 230px minmax(0, 1fr);
+  gap: clamp(28px, 5vw, 64px);
+  align-items: start;
+}
+
+.toc {
+  position: sticky;
+  top: calc(var(--nav-h) + 26px);
+  font-family: var(--mono);
+}
+.toc h2 {
+  font-size: 10.5px; letter-spacing: .24em; text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+.toc ol { counter-reset: toc; }
+.toc li { list-style: none; counter-increment: toc; }
+.toc a {
+  display: flex; gap: 10px; align-items: baseline;
+  padding: 5px 8px; margin-left: -8px;
+  border-radius: 8px;
+  font-size: 12.5px; line-height: 1.45;
+  color: var(--ink-2);
+  transition: color .2s, background .2s;
+}
+.toc a::before {
+  content: counter(toc, decimal-leading-zero);
+  font-size: 10.5px; color: var(--violet);
+  flex: none;
+}
+.toc a:hover { color: var(--violet-deep); background: var(--lilac); }
+
+.paper {
+  background: var(--paper);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r);
+  box-shadow: var(--shadow-sm);
+  padding: clamp(24px, 4.5vw, 56px);
+}
+
+/* sections: the numbering is the document's own, so it is set large */
+.sec { padding: clamp(26px, 4vw, 38px) 0; border-top: 1px solid var(--line-soft); }
+.sec:first-child { padding-top: 0; border-top: 0; }
+.sec:last-child { padding-bottom: 0; }
+
+.sec__head {
+  display: flex; align-items: baseline; gap: 16px;
+  margin-bottom: 16px;
+}
+.sec__num {
+  font-family: var(--mono); font-weight: 700;
+  font-size: 13px; letter-spacing: .08em;
+  color: var(--violet);
+  flex: none;
+}
+.sec h2 {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: clamp(21px, 2.6vw, 27px);
+  letter-spacing: -.01em;
+  line-height: 1.2;
+}
+
+.sec p { max-width: 68ch; color: var(--ink-2); margin-bottom: 14px; }
+.sec p:last-child { margin-bottom: 0; }
+.sec p b, .sec li b { color: var(--ink); }
+.sec ul { max-width: 68ch; margin: 0 0 14px; }
+.sec ul li {
+  list-style: none; position: relative;
+  padding-left: 22px; margin-bottom: 8px;
+  color: var(--ink-2);
+}
+.sec ul li::before {
+  content: ''; position: absolute; left: 2px; top: .62em;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--green-bright), var(--violet-bright));
+}
+
+/* tables: paper cards with a violet header band */
+.tbl-wrap { overflow-x: auto; margin: 18px 0; border-radius: 14px; border: 1px solid var(--line-soft); box-shadow: var(--shadow-sm); }
+table { border-collapse: collapse; width: 100%; min-width: 480px; background: var(--paper); }
+caption {
+  text-align: left;
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: .22em;
+  text-transform: uppercase; color: var(--muted);
+  padding: 12px 16px 10px;
+  background: var(--band);
+  border-bottom: 1px solid var(--line-soft);
+}
+th, td { text-align: left; padding: 11px 16px; border-bottom: 1px solid var(--line-soft); font-size: 14.5px; }
+thead th {
+  font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--violet-deep);
+  background: var(--lilac);
+  border-bottom: 1px solid var(--line);
+}
+tbody tr:last-child td { border-bottom: 0; }
+td { color: var(--ink-2); }
+td:first-child { color: var(--ink); font-weight: 600; }
+.num { font-family: var(--mono); font-size: 13.5px; }
+
+/* callout: for the clauses that most often surprise people */
+.note {
+  max-width: 68ch;
+  margin: 16px 0;
+  padding: 14px 18px;
+  border-left: 3px solid var(--violet);
+  border-radius: 0 12px 12px 0;
+  background: var(--lilac);
+  color: var(--ink-2);
+  font-size: 14.5px;
+}
+.note b { color: var(--ink); }
+
+/* ── Footer: the same plum evening as the homepage ──────────── */
+.foot {
+  position: relative; overflow: hidden;
+  background: #241F35;
+  color: #F6F1E6;
+  padding: 56px 0 48px;
+  text-align: center;
+}
+:root[data-theme="dark"] .foot { background: var(--band); border-top: 1px solid var(--line-soft); }
+.foot::before, .foot::after {
+  content: ''; position: absolute; pointer-events: none; filter: blur(52px);
+}
+.foot::before {
+  top: -110px; left: -80px; width: 360px; aspect-ratio: 1;
+  background: radial-gradient(circle, rgba(46, 212, 127, .2), transparent 70%);
+  border-radius: 58% 42% 55% 45% / 55% 48% 52% 45%;
+}
+.foot::after {
+  bottom: -140px; right: -60px; width: 400px; aspect-ratio: 1;
+  background: radial-gradient(circle, rgba(124, 58, 237, .3), transparent 70%);
+  border-radius: 52% 48% 42% 58% / 45% 52% 55% 48%;
+}
+.foot__inner { position: relative; z-index: 1; display: grid; gap: 8px; padding: 0 18px; }
+.foot__sig {
+  font-family: var(--mono); font-weight: 700; font-size: 15px; letter-spacing: .2em;
+  background: linear-gradient(90deg, var(--green-bright), var(--sun-bright) 55%, var(--violet-bright));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  width: fit-content; margin-inline: auto;
+}
+.foot__meta {
+  font-family: var(--mono); font-size: 11.5px; letter-spacing: .12em;
+  color: rgba(246, 241, 230, .66); text-transform: uppercase;
+}
+:root[data-theme="dark"] .foot__meta { color: var(--muted); }
+.foot__contact { font-size: 13.5px; color: rgba(246, 241, 230, .8); }
+:root[data-theme="dark"] .foot__contact { color: var(--ink-2); }
+.foot__contact a { text-decoration: underline; text-underline-offset: 3px; }
+.foot__contact a:hover { color: var(--sun-bright); }
+.foot__home {
+  margin-top: 6px;
+  font-family: var(--mono); font-size: 12px; letter-spacing: .1em; text-transform: uppercase;
+  color: rgba(246, 241, 230, .55);
+}
+:root[data-theme="dark"] .foot__home { color: var(--muted); }
+.foot__home a:hover { color: var(--sun-bright); }
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 940px) {
+  /* minmax(0,1fr), not 1fr: the tables' min-width must not widen the page */
+  .doc { grid-template-columns: minmax(0, 1fr); }
+  .toc { position: static; }
+  .toc ol {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0 18px;
+  }
+}
+@media (max-width: 560px) {
+  .nav__back span { display: none; }
+  .nav__back::after { content: 'Home'; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .nav__mark svg { animation: none; }
+  *, *::before, *::after { transition-duration: .01ms !important; }
+}
+
+/* ── Print: a clean black-on-white contract ─────────────────── */
+@media print {
+  :root, :root[data-theme="dark"] {
+    --cream: #fff; --paper: #fff; --band: #fff;
+    --ink: #000; --ink-2: #1a1a1a; --muted: #444;
+    --violet: #000; --violet-deep: #000; --lilac: #fff;
+    --line: #bbb; --line-soft: #ddd;
+  }
+  .nav, .toc, .skip { display: none; }
+  .plate { margin-top: 0; }
+  .plate h1 em { color: #000; background: none; -webkit-text-fill-color: #000; }
+  .doc { display: block; padding-top: 24px; }
+  .paper { border: 0; box-shadow: none; padding: 0; }
+  .sec { break-inside: avoid-page; }
+  .foot { background: #fff; color: #000; padding: 24px 0; }
+  .foot::before, .foot::after { display: none; }
+  .foot__sig { background: none; -webkit-text-fill-color: #000; color: #000; }
+  .foot__meta, .foot__contact, .foot__home { color: #333; }
+  .note { background: #fff; border-left-color: #000; }
+  thead th { background: #fff; color: #000; }
+}
+</style>
+</head>
+<body>
+
+<a class="skip" href="#terms">Skip to content</a>
+
+<!-- ══════════ NAV ══════════ -->
+<header class="nav">
+  <a class="nav__brand" href="./">
+    <span class="nav__mark" aria-hidden="true">
+      <svg viewBox="0 0 32 32" width="26" height="26"><path d="M16 2 29 9.5v15L16 32 3 24.5v-15Z" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M16 9v7l6 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="16" cy="16" r="1.9" fill="currentColor"/></svg>
+    </span>
+    <span class="nav__name">GENIESOLOS</span>
+  </a>
+
+  <div class="nav__end">
+    <a class="nav__back" href="./"><span>&larr; Back to site</span></a>
+    <button class="themetog" id="themeToggle" type="button" role="switch" aria-checked="false"
+            aria-label="Dark theme" title="Switch theme">
+      <span class="themetog__thumb" aria-hidden="true">
+        <svg class="themetog__ico themetog__ico--sun" viewBox="0 0 24 24" width="15" height="15">
+          <circle cx="12" cy="12" r="4.2" fill="currentColor"/>
+          <g stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M12 2.6v2.2M12 19.2v2.2M21.4 12h-2.2M4.8 12H2.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6M18.7 18.7l-1.6-1.6M6.9 6.9 5.3 5.3"/>
+          </g>
+        </svg>
+        <svg class="themetog__ico themetog__ico--moon" viewBox="0 0 24 24" width="15" height="15">
+          <path d="M20 14.2A8.4 8.4 0 0 1 9.8 4a8.4 8.4 0 1 0 10.2 10.2Z" fill="currentColor"/>
+        </svg>
+      </span>
+    </button>
+  </div>
+</header>
+
+<!-- ══════════ DOCUMENT PLATE ══════════ -->
+<section class="plate">
+  <p class="plate__mark">
+    <svg viewBox="0 0 32 32" width="30" height="30" aria-hidden="true"><path d="M16 2 29 9.5v15L16 32 3 24.5v-15Z" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M16 9v7l6 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="16" cy="16" r="1.9" fill="currentColor"/></svg>
+    GenieSolos&nbsp;Tech
+    <span class="rule" aria-hidden="true"></span>
+  </p>
+
+  <h1>Service <em>Terms</em></h1>
+
+  <p class="plate__lede">
+    <b>Effective on the date you subscribe.</b> By subscribing, you agree to these terms.
+    They cover recurring managed services provided by GenieSolos Tech (&ldquo;we,&rdquo; &ldquo;us&rdquo;)
+    to you (&ldquo;Client&rdquo;). If you have signed a separate written agreement with us, that
+    agreement controls where it differs from these terms.
+  </p>
+
+  <dl class="plate__meta">
+    <div>
+      <dt>Document</dt>
+      <dd>GS&#8209;SERVICE&#8209;TERMS</dd>
+    </div>
+    <div>
+      <dt>Revised</dt>
+      <dd>August 2026</dd>
+    </div>
+    <div>
+      <dt>Governing law</dt>
+      <dd>State of Maryland</dd>
+    </div>
+    <div>
+      <dt>Questions</dt>
+      <dd><a href="mailto:geniesolostech@gmail.com">geniesolostech@gmail.com</a></dd>
+    </div>
+  </dl>
+</section>
+
+<!-- ══════════ DOCUMENT BODY ══════════ -->
+<main class="doc" id="terms">
+
+  <nav class="toc" aria-label="Table of contents">
+    <h2>Contents</h2>
+    <ol>
+      <li><a href="#plans">Plans and pricing</a></li>
+      <li><a href="#included">What is included</a></li>
+      <li><a href="#response">Response times</a></li>
+      <li><a href="#billing">Billing</a></li>
+      <li><a href="#cancellation">Cancellation and refunds</a></li>
+      <li><a href="#ownership">Website ownership and your content</a></li>
+      <li><a href="#payments">Online payments (Storefront)</a></li>
+      <li><a href="#responsibilities">Your responsibilities</a></li>
+      <li><a href="#confidentiality">Confidentiality and data</a></li>
+      <li><a href="#liability">Service limits and liability</a></li>
+      <li><a href="#general">General</a></li>
+    </ol>
+  </nav>
+
+  <article class="paper">
+
+    <section class="sec" id="plans">
+      <header class="sec__head"><span class="sec__num">01</span><h2>Plans and pricing</h2></header>
+
+      <div class="tbl-wrap">
+        <table>
+          <caption>Monthly plans</caption>
+          <thead>
+            <tr><th>Plan</th><th>Monthly</th><th>Included users</th><th>Additional users</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Lifeline</td><td class="num">$299</td><td class="num">10</td><td class="num">$20/user/month</td></tr>
+            <tr><td>Presence</td><td class="num">$649</td><td class="num">15</td><td class="num">$25/user/month</td></tr>
+            <tr><td>Transformation</td><td class="num">$999</td><td class="num">20</td><td class="num">$25/user/month</td></tr>
+            <tr><td>Storefront (zero&#8209;down)</td><td class="num">$499</td><td>n/a</td><td>n/a</td></tr>
+            <tr><td>Storefront (build&nbsp;+&nbsp;care)</td><td class="num">$4,500 once, then $149</td><td>n/a</td><td>n/a</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        Each plan includes everything in the plan above it in this list, except Storefront,
+        which is a standalone package for online-only businesses.
+      </p>
+
+      <div class="tbl-wrap">
+        <table>
+          <caption>Optional add-ons, available with any plan</caption>
+          <thead>
+            <tr><th>Add-on</th><th>Price</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Server Care (per server)</td><td class="num">$225/month</td></tr>
+            <tr><td>Database Care (per instance)</td><td class="num">$175/month</td></tr>
+            <tr><td>Workspace Admin added to Storefront</td><td class="num">$199/month</td></tr>
+            <tr><td>Migration projects</td><td class="num">Quoted, $1,500&ndash;$4,500 typical</td></tr>
+            <tr><td>Microsoft 365 or Google Workspace licenses</td><td>Billed at list price</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        User counts are reviewed monthly. If your user count exceeds your plan&rsquo;s included
+        seats, additional seats are billed at the rate above starting the following billing cycle.
+      </p>
+    </section>
+
+    <section class="sec" id="included">
+      <header class="sec__head"><span class="sec__num">02</span><h2>What is included</h2></header>
+      <p>
+        <b>Support</b> covers keeping your existing systems, accounts, website, and services
+        working as intended: troubleshooting, fixes, routine maintenance, configuration, and
+        advice. Support is delivered remotely. On-site visits are scheduled by mutual agreement
+        and quoted separately.
+      </p>
+      <p>
+        <b>Workspace administration</b> (Microsoft 365 or Google Workspace) covers user and
+        mailbox management, licensing, permissions, security configuration, and related
+        administration for the users included in your plan.
+      </p>
+      <p>
+        <b>Not included</b>, and quoted separately as project work: new websites or applications
+        (other than the build included in Transformation and Storefront), new system rollouts and
+        migrations, server and database management (available as add-ons above), hardware, and
+        graphic design beyond website content. &ldquo;Unlimited&rdquo; support means unlimited
+        reasonable requests within the scope above.
+      </p>
+    </section>
+
+    <section class="sec" id="response">
+      <header class="sec__head"><span class="sec__num">03</span><h2>Response times</h2></header>
+
+      <div class="tbl-wrap">
+        <table>
+          <caption>Initial response targets</caption>
+          <thead>
+            <tr><th>Plan</th><th>Initial response target</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Lifeline</td><td>Same business day</td></tr>
+            <tr><td>Presence</td><td>4 business hours</td></tr>
+            <tr><td>Transformation</td><td>1 hour for emergencies, 24/7; 4 business hours otherwise</td></tr>
+            <tr><td>Storefront</td><td>4 business hours</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        Business hours are Monday through Friday, 9:00 AM to 6:00 PM Eastern, excluding federal
+        holidays. These are targets for our initial response, not guaranteed resolution times.
+        An &ldquo;emergency&rdquo; means your website or a business-critical system is fully down,
+        or a security incident is actively in progress.
+      </p>
+      <p>
+        Routine maintenance and patching are performed during scheduled windows, normally outside
+        business hours, with advance notice for anything that may cause an interruption.
+      </p>
+    </section>
+
+    <section class="sec" id="billing">
+      <header class="sec__head"><span class="sec__num">04</span><h2>Billing</h2></header>
+      <p>
+        Fees are billed monthly in advance and charged automatically to your payment method on
+        file. Your subscription renews automatically each month until cancelled.
+      </p>
+      <p>
+        Third-party costs purchased on your behalf (domains, licenses, premium software) are
+        billed at cost plus any disclosed management fee. Any single item over $100 requires
+        your approval first.
+      </p>
+      <p>
+        If a payment fails, we will retry and notify you. Accounts more than 30 days past due
+        may be suspended until brought current. We may adjust pricing with 60 days&rsquo; written
+        notice, no more than once per 12-month period.
+      </p>
+    </section>
+
+    <section class="sec" id="cancellation">
+      <header class="sec__head"><span class="sec__num">05</span><h2>Cancellation and refunds</h2></header>
+      <p>You may cancel at any time from your billing portal or by emailing us.</p>
+      <p>
+        <b>Month-to-month plans (Lifeline, Presence, Storefront build&nbsp;+&nbsp;care):</b> on
+        cancellation, we refund any unused full months you have paid in advance. The current
+        billing period is non-refundable once service has been used during that period, and
+        service continues through the end of that period.
+      </p>
+      <p>
+        <b>Term plans (Transformation, Storefront zero-down):</b> these carry a 12-month minimum
+        commitment because the website build is delivered with no upfront cost. If you cancel
+        before month 12, you may either pay the remaining monthly fees of the initial term, or
+        discontinue use of the website we built. Refunds do not apply during the initial term.
+        After month 12, these plans continue month-to-month and the refund policy above applies.
+      </p>
+      <div class="note">
+        <b>In short:</b> setup fees and completed one-time project work (including the Storefront
+        build fee) are non-refundable once the work is delivered.
+      </div>
+    </section>
+
+    <section class="sec" id="ownership">
+      <header class="sec__head"><span class="sec__num">06</span><h2>Website ownership and your content</h2></header>
+      <p>
+        <b>Your domain is yours at all times.</b> We register and manage it with you listed as
+        the owner. We will transfer it promptly on request once your account is current.
+      </p>
+      <p>
+        <b>Website ownership:</b> for Transformation and Storefront zero-down, full ownership of
+        the website design and content transfers to you after completion of the 12-month term.
+        For Storefront build&nbsp;+&nbsp;care, ownership transfers when the build fee is paid in full.
+      </p>
+      <p>
+        <b>Your content:</b> you confirm you own or have the rights to all content, images,
+        product information, and materials you supply or upload, and you are responsible for
+        what you publish.
+      </p>
+      <p>
+        <b>Your edits:</b> changes you make in the website editor are your responsibility. We
+        will restore your site from backup at no charge up to twice per year for issues caused
+        by your own edits. Additional restorations or repair of client-caused breakage is billed
+        hourly with your approval first.
+      </p>
+    </section>
+
+    <section class="sec" id="payments">
+      <header class="sec__head"><span class="sec__num">07</span><h2>Online payments (Storefront)</h2></header>
+      <p>
+        All payment processing runs through your own merchant account. You are the merchant of
+        record for your sales. We do not store, process, or transmit cardholder data. You are
+        responsible for chargebacks, refunds, disputes, sales tax collection and remittance,
+        shipping and returns, product legality, and consumer protection compliance for your
+        business.
+      </p>
+    </section>
+
+    <section class="sec" id="responsibilities">
+      <header class="sec__head"><span class="sec__num">08</span><h2>Your responsibilities</h2></header>
+      <p>
+        Designate a primary point of contact, provide timely access, content, and approvals,
+        and keep your account information current. We are not responsible for delays caused by
+        missing access or materials.
+      </p>
+    </section>
+
+    <section class="sec" id="confidentiality">
+      <header class="sec__head"><span class="sec__num">09</span><h2>Confidentiality and data</h2></header>
+      <p>
+        We keep your non-public information confidential and follow industry-standard security
+        practices when handling your systems and data. On termination, once your account is
+        current, we will hand over hosting, credentials, backups, and materials belonging to
+        you within 15 business days.
+      </p>
+    </section>
+
+    <section class="sec" id="liability">
+      <header class="sec__head"><span class="sec__num">10</span><h2>Service limits and liability</h2></header>
+      <p>
+        We perform services in a professional and workmanlike manner. Beyond that, services are
+        provided &ldquo;as is.&rdquo;
+      </p>
+      <p>
+        We are not liable for outages or failures caused by third-party services beyond our
+        control, including cloud hosting providers, payment processors, domain registrars,
+        internet providers, and software vendors. Hosting includes bandwidth and storage
+        reasonable for a small business website; in the event of sustained extraordinary
+        traffic or denial-of-service activity, we may pass through resulting hosting costs at
+        cost with notice, and take protective measures to preserve service.
+      </p>
+      <p>
+        Our total liability under these terms is limited to the fees you paid in the three
+        months preceding the claim. Neither party is liable for indirect or consequential
+        damages.
+      </p>
+    </section>
+
+    <section class="sec" id="general">
+      <header class="sec__head"><span class="sec__num">11</span><h2>General</h2></header>
+      <p>
+        We are an independent contractor, not your employee. We may update these terms with
+        30 days&rsquo; notice; continued use after that constitutes acceptance. These terms are
+        governed by the laws of the State of Maryland. If any provision is unenforceable, the
+        rest remains in effect.
+      </p>
+    </section>
+
+  </article>
+</main>
+
+<!-- ══════════ FOOTER ══════════ -->
+<footer class="foot">
+  <div class="foot__inner">
+    <p class="foot__sig">GENIESOLOS&nbsp;TECH</p>
+    <p class="foot__meta">Service Terms</p>
+    <p class="foot__contact">
+      <a href="https://geniesolos.com">geniesolos.com</a> &nbsp;|&nbsp;
+      <a href="mailto:geniesolostech@gmail.com">geniesolostech@gmail.com</a> &nbsp;|&nbsp;
+      <a href="tel:+12403219004">240&#8209;321&#8209;9004</a>
+    </p>
+    <p class="foot__home"><a href="./">&larr; Back to geniesolos.com</a></p>
+  </div>
+</footer>
+
+<script>
+/* Theme toggle: the same behavior as the homepage's, standalone so this
+   page does not depend on js/main.js and its cache-busting cycle. */
+(function () {
+  var btn = document.getElementById('themeToggle');
+  if (!btn) return;
+
+  var meta = document.getElementById('themeColor');
+  var root = document.documentElement;
+
+  function apply(name, persist) {
+    if (name === 'dark') root.setAttribute('data-theme', 'dark');
+    else root.removeAttribute('data-theme');
+
+    btn.setAttribute('aria-checked', String(name === 'dark'));
+    btn.setAttribute('aria-label', name === 'dark' ? 'Light theme' : 'Dark theme');
+    if (meta) meta.setAttribute('content', name === 'dark' ? '#060807' : '#FAF5EC');
+
+    if (persist) {
+      try { localStorage.setItem('gs-theme', name); } catch (e) { /* private mode */ }
+    }
+  }
+
+  function current() {
+    return root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+  }
+
+  apply(current(), false);
+  btn.addEventListener('click', function () {
+    apply(current() === 'dark' ? 'light' : 'dark', true);
+  });
+
+  var mq = window.matchMedia('(prefers-color-scheme: dark)');
+  var onSystem = function (e) {
+    var chosen = null;
+    try { chosen = localStorage.getItem('gs-theme'); } catch (err) { /* ignore */ }
+    if (!chosen) apply(e.matches ? 'dark' : 'light', false);
+  };
+  if (mq.addEventListener) mq.addEventListener('change', onSystem);
+  else if (mq.addListener) mq.addListener(onSystem);
+})();
+</script>
+
+</body>
+</html>

@@ -69,11 +69,17 @@ jobs:
       # stylesheet with a stale document.
       - name: Upload HTML
         run: |
-          for f in index.html 404.html; do
+          for f in index.html 404.html terms.html; do
             aws s3 cp "$f" "s3://$BUCKET/$f" \
               --cache-control "public, max-age=0, must-revalidate" \
               --content-type "text/html; charset=utf-8"
           done
+          # Clean-URL copy: S3 has no rewrite rules, the object key IS the
+          # URL, so /terms only works if an object named "terms" exists.
+          # Keep identical to the extensionless upload in scripts/deploy.ps1.
+          aws s3 cp terms.html "s3://$BUCKET/terms" \
+            --cache-control "public, max-age=0, must-revalidate" \
+            --content-type "text/html; charset=utf-8"
 
       - name: Invalidate CloudFront
         run: |

@@ -38,7 +38,7 @@ $Bucket         = 'geniesolos-com-site'
 $DistributionId = 'E13HIX0DOKUMO1'
 $Region         = 'us-east-1'
 $SiteUrl        = 'https://geniesolos.com/'
-$HtmlFiles      = @('index.html', '404.html')
+$HtmlFiles      = @('index.html', '404.html', 'terms.html')
 
 # $Region is passed explicitly to every AWS call below. Without it the CLI
 # falls back to whatever region the active profile happens to be configured
@@ -164,6 +164,17 @@ try {
         if ($LASTEXITCODE -ne 0) { throw "upload failed: $f" }
         Ok "uploaded $f"
     }
+
+    # Clean-URL copy: S3 has no rewrite rules, the object key IS the URL, so
+    # /terms only works if an object named "terms" exists. Keep identical to
+    # the extensionless upload in .github/workflows/deploy.yml.
+    $cpArgs = @('s3', 'cp', 'terms.html', "s3://$Bucket/terms", '--region', $Region,
+                '--cache-control', 'public, max-age=0, must-revalidate',
+                '--content-type', 'text/html; charset=utf-8')
+    if ($DryRun) { $cpArgs += '--dryrun' }
+    aws @cpArgs | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "upload failed: terms (clean URL)" }
+    Ok "uploaded terms.html as /terms"
 
     # ---------------------------------------------------------------- 6
     if ($SkipInvalidation) {
