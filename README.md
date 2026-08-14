@@ -25,8 +25,10 @@ meta tags at the top of `index.html`.
 
 ```
 index.html          all content and page structure
-terms.html          service terms (self-contained, served at /terms)
+terms.html          service terms (served at /terms)
 css/style.css       the entire visual design, both themes
+css/terms.css       terms page styles (external: the CloudFront CSP blocks inline styles)
+js/terms.js         terms page theme toggle (external, same CSP reason)
 js/main.js          boot sequence, canvases, theme toggle, scroll behavior
 assets/
   favicon.svg       browser tab icon
