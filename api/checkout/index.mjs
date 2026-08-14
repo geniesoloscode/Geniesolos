@@ -1,0 +1,245 @@
+/* Checkout session Lambda for geniesolos.com.
+ *
+ * One file, no dependencies, Node 22 ESM. It takes a cart from the store
+ * drawer, revalidates it under the same rules the browser enforces, turns it
+ * into Stripe Checkout Session parameters and hands the session URL back.
+ *
+ * The client never sends prices. Every amount lives in Stripe and is reached
+ * only through PRICE_MAP, so the worst a tampered request can do is fail
+ * validation.
+ *
+ * Env:
+ *   STRIPE_SECRET_KEY  sk_test_... or sk_live_...
+ *   PRICE_MAP          JSON {key: [priceId, ...]}, recurring id first
+ *   ALLOWED_ORIGIN     https://geniesolos.com
+ */
+
+const STRIPE_SESSIONS_URL = 'https://api.stripe.com/v1/checkout/sessions';
+const STRIPE_TIMEOUT_MS = 10000;
+const MAX_LINES = 10;
+
+const SUCCESS_URL = 'https://geniesolos.com/store?checkout=success';
+const CANCEL_URL = 'https://geniesolos.com/store?checkout=cancelled';
+
+const PAYMENT_FAILED =
+  'Payment setup failed. Nothing was charged. Email geniesolostech@gmail.com if this keeps happening.';
+
+/* The rule table, duplicated from js/store-cart.js on purpose: this function
+   ships alone, with no bundler and no shared module. Prices are deliberately
+   absent, because Stripe holds them and PRICE_MAP points at them. kind decides
+   what a line needs beside it: 'addon' needs any plan, 'storefront-addon'
+   needs one of the two Storefront plans. */
+const CATALOG = {
+  'lifeline':          { name: 'Lifeline',                  kind: 'base',             maxQty: 1 },
+  'presence':          { name: 'Presence',                  kind: 'base',             maxQty: 1 },
+  'transformation':    { name: 'Transformation',            kind: 'base',             maxQty: 1 },
+  'storefront-zero':   { name: 'Storefront (zero-down)',    kind: 'storefront-base',  maxQty: 1 },
+  'storefront-build':  { name: 'Storefront (build + care)', kind: 'storefront-base',  maxQty: 1 },
+  'server-care':       { name: 'Server Care',               kind: 'addon',            maxQty: 20 },
+  'db-care':           { name: 'Database Care',             kind: 'addon',            maxQty: 20 },
+  'workspace-admin':   { name: 'Workspace Admin',           kind: 'storefront-addon', maxQty: 1 },
+};
+
+const owns = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
+
+/* Own properties only: a key of 'constructor' would otherwise find one. */
+function product(key) {
+  return typeof key === 'string' && owns(CATALOG, key) ? CATALOG[key] : null;
+}
+
+function isBase(key) {
+  const p = product(key);
+  return !!p && (p.kind === 'base' || p.kind === 'storefront-base');
+}
+
+function isStorefrontBase(key) {
+  const p = product(key);
+  return !!p && p.kind === 'storefront-base';
+}
+
+const fail = (error) => ({ ok: false, error });
+
+/* Kept in step with GSCart.validate in js/store-cart.js: anything the drawer
+   refuses, this refuses, with the same words. */
+function validateCart(items) {
+  if (!Array.isArray(items) || items.length < 1) return fail('Your cart is empty.');
+  if (items.length > MAX_LINES) return fail(`A cart holds at most ${MAX_LINES} items.`);
+
+  const seen = Object.create(null);
+  let bases = 0;
+  let storefront = false;
+
+  for (const raw of items) {
+    const item = raw || {};
+    const p = product(item.key);
+    if (!p) return fail('That item is not in the catalog.');
+    if (seen[item.key]) return fail(`${p.name} is in the cart twice.`);
+    seen[item.key] = true;
+
+    if (typeof item.qty !== 'number' || !Number.isInteger(item.qty)) {
+      return fail(`Choose a whole number of ${p.name}.`);
+    }
+    if (item.qty < 1 || item.qty > p.maxQty) {
+      return fail(`${p.name} takes a quantity of 1 to ${p.maxQty}.`);
+    }
+
+    if (isBase(item.key)) bases++;
+    if (isStorefrontBase(item.key)) storefront = true;
+  }
+
+  if (bases === 0) return fail('Pick a plan before checking out.');
+  if (bases > 1) return fail('Pick one plan, not several.');
+  if (seen['workspace-admin'] && !storefront) {
+    return fail(`${CATALOG['workspace-admin'].name} is only available with a Storefront plan.`);
+  }
+  return { ok: true };
+}
+
+/* Read per request rather than at import time, so a console env edit takes
+   effect on the next invocation instead of the next cold start. */
+function config() {
+  let priceMap = null;
+  try {
+    const parsed = JSON.parse(process.env.PRICE_MAP || 'null');
+    if (parsed && typeof parsed === 'object') priceMap = parsed;
+  } catch {
+    priceMap = null;
+  }
+  return {
+    secret: process.env.STRIPE_SECRET_KEY || '',
+    allowedOrigin: process.env.ALLOWED_ORIGIN || 'https://geniesolos.com',
+    priceMap,
+  };
+}
+
+function priceIdsFor(priceMap, key) {
+  if (!priceMap || !owns(priceMap, key)) return null;
+  const ids = priceMap[key];
+  if (!Array.isArray(ids) || ids.length < 1) return null;
+  if (!ids.every((id) => typeof id === 'string' && id.length > 0)) return null;
+  return ids;
+}
+
+/* One line item per price ID, in map order, so storefront-build's monthly
+   price lands before its one-time build fee. Throws when the map cannot serve
+   a key, which is a deploy mistake rather than a customer mistake. */
+function buildParams(items, priceMap) {
+  const params = new URLSearchParams();
+  let line = 0;
+
+  for (const item of items) {
+    const ids = priceIdsFor(priceMap, item.key);
+    if (!ids) throw new Error(`PRICE_MAP has no usable price IDs for ${item.key}`);
+    for (const id of ids) {
+      params.set(`line_items[${line}][price]`, id);
+      params.set(`line_items[${line}][quantity]`, String(item.qty));
+      line++;
+    }
+  }
+
+  params.set('mode', 'subscription');
+  params.set('success_url', SUCCESS_URL);
+  params.set('cancel_url', CANCEL_URL);
+  params.set('consent_collection[terms_of_service]', 'required');
+  params.set('billing_address_collection', 'auto');
+  params.set('allow_promotion_codes', 'true');
+  return params;
+}
+
+function headerOf(event, name) {
+  const headers = (event && event.headers) || {};
+  for (const key of Object.keys(headers)) {
+    if (key.toLowerCase() === name) return headers[key];
+  }
+  return undefined;
+}
+
+function bodyOf(event) {
+  const body = event && event.body;
+  if (typeof body !== 'string') return '';
+  return event.isBase64Encoded ? Buffer.from(body, 'base64').toString('utf8') : body;
+}
+
+const json = (statusCode, payload, headers = {}) => ({
+  statusCode,
+  headers: { 'content-type': 'application/json', ...headers },
+  body: JSON.stringify(payload),
+});
+
+/* Stripe's own message, for the log only. Never shown to the customer and
+   never carrying the key, which only ever travels in a request header. */
+async function stripeErrorText(res) {
+  try {
+    const body = await res.json();
+    const message = body && body.error && body.error.message;
+    return typeof message === 'string' ? message : '';
+  } catch {
+    return '';
+  }
+}
+
+export const handler = async (event) => {
+  const method = event?.requestContext?.http?.method || '';
+  if (method !== 'POST') {
+    return json(405, { error: 'Use POST to start checkout.' }, { allow: 'POST' });
+  }
+
+  const cfg = config();
+  const origin = headerOf(event, 'origin');
+  if (origin && origin !== cfg.allowedOrigin) {
+    return json(403, { error: `Checkout only answers requests from ${cfg.allowedOrigin}.` });
+  }
+
+  let payload;
+  try {
+    payload = JSON.parse(bodyOf(event));
+  } catch {
+    return json(400, { error: 'That request was not valid JSON.' });
+  }
+
+  const check = validateCart(payload && payload.items);
+  if (!check.ok) return json(400, { error: check.error });
+
+  /* Rebuilt from the two fields we trust. Anything else the client sent,
+     price fields included, is dropped here rather than forwarded. */
+  const items = payload.items.map((i) => ({ key: i.key, qty: i.qty }));
+
+  let params;
+  try {
+    if (!cfg.secret) throw new Error('STRIPE_SECRET_KEY is not set');
+    params = buildParams(items, cfg.priceMap);
+  } catch (err) {
+    console.error('checkout is misconfigured:', err.message);
+    return json(500, { error: PAYMENT_FAILED });
+  }
+
+  let session;
+  try {
+    const res = await fetch(STRIPE_SESSIONS_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${cfg.secret}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: params.toString(),
+      signal: AbortSignal.timeout(STRIPE_TIMEOUT_MS),
+    });
+
+    if (!res.ok) {
+      console.error('stripe refused the session:', res.status, await stripeErrorText(res));
+      return json(502, { error: PAYMENT_FAILED });
+    }
+    session = await res.json();
+  } catch (err) {
+    console.error('stripe call failed:', err.message);
+    return json(502, { error: PAYMENT_FAILED });
+  }
+
+  if (!session || typeof session.url !== 'string' || session.url.length < 1) {
+    console.error('stripe returned a session with no url');
+    return json(502, { error: PAYMENT_FAILED });
+  }
+
+  console.log('checkout session created:', session.id || '(no id)');
+  return json(200, { url: session.url });
+};
