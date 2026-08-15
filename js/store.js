@@ -1,0 +1,622 @@
+/* Store page behavior: theme toggle, reveal-on-scroll, the cart drawer, and
+   the call to /api/checkout. External rather than inline because the
+   CloudFront CSP is script-src 'self' plus exactly one hash, and that hash
+   belongs to the theme snippet in the document head.
+
+   All cart RULES live in js/store-cart.js (window.GSCart), which is loaded
+   first and is the same file the unit tests run. This file only moves state
+   between localStorage, the DOM, and the checkout API. */
+(function () {
+  'use strict';
+
+  var $  = function (sel, ctx) { return (ctx || document).querySelector(sel); };
+  var $$ = function (sel, ctx) { return Array.prototype.slice.call((ctx || document).querySelectorAll(sel)); };
+
+  /* ─────────────────────────────────────────────────────────────
+     0. THEME
+     Same standalone logic as js/terms.js: this page has no other
+     script, and the pre-paint snippet in <head> only sets the
+     attribute, it does not wire the control.
+     ───────────────────────────────────────────────────────────── */
+  (function theme() {
+    var btn = document.getElementById('themeToggle');
+    if (!btn) return;
+
+    var meta = document.getElementById('themeColor');
+    var root = document.documentElement;
+
+    function apply(name, persist) {
+      if (name === 'dark') root.setAttribute('data-theme', 'dark');
+      else root.removeAttribute('data-theme');
+
+      btn.setAttribute('aria-checked', String(name === 'dark'));
+      btn.setAttribute('aria-label', name === 'dark' ? 'Light theme' : 'Dark theme');
+      if (meta) meta.setAttribute('content', name === 'dark' ? '#060807' : '#FAF5EC');
+
+      if (persist) {
+        try { localStorage.setItem('gs-theme', name); } catch (e) { /* private mode */ }
+      }
+    }
+
+    function current() {
+      return root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+    }
+
+    apply(current(), false);
+    btn.addEventListener('click', function () {
+      apply(current() === 'dark' ? 'light' : 'dark', true);
+    });
+
+    var mq = window.matchMedia('(prefers-color-scheme: dark)');
+    var onSystem = function (e) {
+      var chosen = null;
+      try { chosen = localStorage.getItem('gs-theme'); } catch (err) { /* ignore */ }
+      if (!chosen) apply(e.matches ? 'dark' : 'light', false);
+    };
+    if (mq.addEventListener) mq.addEventListener('change', onSystem);
+    else if (mq.addListener) mq.addListener(onSystem);
+  })();
+
+  /* ?still=1: the screenshot mode the homepage uses. Everything settled,
+     nothing looping, all reveals already in. */
+  var still = /(^|[?&])still=1\b/.test(location.search);
+  if (still) document.documentElement.classList.add('still');
+
+  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ─────────────────────────────────────────────────────────────
+     1. REVEAL ON SCROLL
+     Its own observer: this page never loads js/main.js.
+     ───────────────────────────────────────────────────────────── */
+  (function reveals() {
+    var targets = $$('[data-reveal]');
+    if (!targets.length) return;
+
+    if (still || reduced || !('IntersectionObserver' in window)) {
+      targets.forEach(function (el) { el.classList.add('in'); });
+      return;
+    }
+
+    var io = new IntersectionObserver(function (entries, obs) {
+      entries.forEach(function (en) {
+        if (!en.isIntersecting) return;
+        en.target.classList.add('in');
+        obs.unobserve(en.target);
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -60px' });
+
+    targets.forEach(function (el) {
+      var sibs = Array.prototype.filter.call(el.parentNode.children, function (n) {
+        return n.hasAttribute('data-reveal');
+      });
+      el.style.transitionDelay = Math.min(sibs.indexOf(el), 5) * 70 + 'ms';
+      io.observe(el);
+    });
+  })();
+
+  /* ─────────────────────────────────────────────────────────────
+     2. CART
+     ───────────────────────────────────────────────────────────── */
+  var Cart = window.GSCart;
+  if (!Cart) return;                     /* rules missing: leave a static page */
+
+  var STORE_KEY = 'gs-cart';
+  var API = '/api/checkout';
+  var FALLBACK_ERR = 'Checkout is unavailable right now. Nothing was charged. ' +
+                     'Please try again in a moment, or email geniesolostech@gmail.com.';
+
+  var items = [];
+
+  var fab        = $('#cartFab');
+  var badge      = $('#cartBadge');
+  var live       = $('#cartLive');
+  var toastsEl   = $('#toasts');
+  var drawer     = $('#cartDrawer');
+  var panel      = $('.drawer__panel', drawer);
+  var linesEl    = $('#cartLines');
+  var emptyEl    = $('#cartEmpty');
+  var monthlyEl  = $('#totalMonthly');
+  var onceEl     = $('#totalOnce');
+  var onceRow    = $('#onceRow');
+  var errEl      = $('#cartError');
+  var goBtn      = $('#checkoutBtn');
+  var goLabel    = $('.drawer__go-label', goBtn);
+
+  /* ── storage ─────────────────────────────────────────────── */
+  function load() {
+    var raw = null;
+    try { raw = localStorage.getItem(STORE_KEY); } catch (e) { return []; }
+    if (!raw) return [];
+
+    var parsed = null;
+    try { parsed = JSON.parse(raw); } catch (e) { return []; }   /* bad JSON: start clean */
+    if (!parsed || parsed.v !== 1 || !Array.isArray(parsed.items)) return [];
+
+    var out = [];
+    for (var i = 0; i < parsed.items.length; i++) {
+      var it = parsed.items[i] || {};
+      if (!Object.prototype.hasOwnProperty.call(Cart.CATALOG, it.key)) continue;
+      var qty = Math.floor(Number(it.qty));
+      if (!isFinite(qty) || qty < 1) qty = 1;
+      out.push({ key: it.key, qty: Math.min(qty, Cart.CATALOG[it.key].maxQty) });
+    }
+    /* A stored cart can violate the rules if the catalog changed under it;
+       setQty is a no-op filter here, so lean on validate at checkout time. */
+    return out;
+  }
+
+  function save() {
+    try {
+      localStorage.setItem(STORE_KEY, JSON.stringify({ v: 1, items: items }));
+    } catch (e) { /* private mode: the cart lives for this page view only */ }
+  }
+
+  /* ── formatting ──────────────────────────────────────────── */
+  function money(cents) {
+    var whole = Math.floor(Math.abs(cents) / 100);
+    var rest = Math.abs(cents) % 100;
+    var out = '$' + String(whole).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    if (rest) out += '.' + (rest < 10 ? '0' + rest : String(rest));
+    return (cents < 0 ? '-' : '') + out;
+  }
+
+  function names(list) {
+    if (list.length === 1) return list[0];
+    return list.slice(0, -1).join(', ') + ' and ' + list[list.length - 1];
+  }
+
+  /* ── toasts ──────────────────────────────────────────────── */
+  function toast(msg, kind) {
+    if (!toastsEl) return;
+
+    while (toastsEl.children.length > 2) toastsEl.removeChild(toastsEl.firstChild);
+
+    var el = document.createElement('p');
+    el.className = 'toast' + (kind ? ' toast--' + kind : '');
+    el.textContent = msg;
+    toastsEl.appendChild(el);
+
+    setTimeout(function () {
+      el.classList.add('is-going');
+      setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 320);
+    }, 4600);
+  }
+
+  /* ── stepper widget (shared by the cards and the drawer) ─── */
+  /* Static markup, so the same glyphs as the cards' hand-written steppers
+     rather than a text hyphen that sits half a pixel off centre. */
+  var ICON_MINUS = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">' +
+    '<path d="M5 12h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
+  var ICON_PLUS = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">' +
+    '<path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
+
+  function makeStepper(key, qty, label, fidPrefix) {
+    var max = Cart.CATALOG[key].maxQty;
+    var wrap = document.createElement('div');
+    wrap.className = 'stepper';
+
+    var minus = document.createElement('button');
+    minus.type = 'button';
+    minus.className = 'stepper__btn';
+    minus.setAttribute('aria-label', 'One fewer ' + label);
+    minus.setAttribute('data-fid', fidPrefix + '-minus-' + key);
+    minus.innerHTML = ICON_MINUS;
+    minus.disabled = qty <= 1;
+
+    var val = document.createElement('output');
+    val.className = 'stepper__val';
+    val.textContent = String(qty);
+    val.setAttribute('aria-label', label + ' quantity');
+
+    var plus = document.createElement('button');
+    plus.type = 'button';
+    plus.className = 'stepper__btn';
+    plus.setAttribute('aria-label', 'One more ' + label);
+    plus.setAttribute('data-fid', fidPrefix + '-plus-' + key);
+    plus.innerHTML = ICON_PLUS;
+    plus.disabled = qty >= max;
+
+    wrap.appendChild(minus);
+    wrap.appendChild(val);
+    wrap.appendChild(plus);
+
+    minus.addEventListener('click', function () { setQty(key, qty - 1); });
+    plus.addEventListener('click', function () { setQty(key, qty + 1); });
+    return wrap;
+  }
+
+  /* ── drawer line items ───────────────────────────────────── */
+  function lineNode(item) {
+    var p = Cart.CATALOG[item.key];
+
+    var li = document.createElement('li');
+    li.className = 'line';
+
+    var name = document.createElement('p');
+    name.className = 'line__name';
+    name.textContent = p.name;
+
+    var sum = document.createElement('p');
+    sum.className = 'line__sum';
+    sum.textContent = money(p.monthly * item.qty) + '/mo';
+
+    li.appendChild(name);
+    li.appendChild(sum);
+
+    var bits = [];
+    if (p.maxQty > 1) bits.push(money(p.monthly) + '/month each');
+    if (p.once) bits.push(money(p.once * item.qty) + ' due today');
+    if (bits.length) {
+      var meta = document.createElement('p');
+      meta.className = 'line__meta';
+      meta.textContent = bits.join('  ·  ');
+      li.appendChild(meta);
+    }
+
+    var ctl = document.createElement('div');
+    ctl.className = 'line__ctl';
+    if (p.maxQty > 1) ctl.appendChild(makeStepper(item.key, item.qty, p.name, 'line'));
+
+    var rm = document.createElement('button');
+    rm.type = 'button';
+    rm.className = 'line__rm';
+    rm.textContent = 'Remove';
+    rm.setAttribute('aria-label', 'Remove ' + p.name + ' from the cart');
+    rm.setAttribute('data-fid', 'line-rm-' + item.key);
+    rm.addEventListener('click', function () { removeKey(item.key); });
+    ctl.appendChild(rm);
+
+    li.appendChild(ctl);
+    return li;
+  }
+
+  /* ── render ──────────────────────────────────────────────── */
+  function render() {
+    /* Rebuilding the list throws away focus, so remember which control had
+       it and hand it back to the control with the same identity. */
+    var active = document.activeElement;
+    var fid = active && active.getAttribute ? active.getAttribute('data-fid') : null;
+
+    while (linesEl.firstChild) linesEl.removeChild(linesEl.firstChild);
+    items.forEach(function (item) { linesEl.appendChild(lineNode(item)); });
+
+    emptyEl.hidden = items.length > 0;
+
+    var t = Cart.totals(items);
+    monthlyEl.textContent = money(t.monthly);
+    onceEl.textContent = money(t.once);
+    onceRow.hidden = t.once === 0;
+
+    var count = items.length;
+    badge.textContent = String(count);
+    fab.classList.toggle('is-empty', count === 0);
+    fab.setAttribute('aria-label', count === 0
+      ? 'Cart, empty'
+      : 'Cart, ' + count + (count === 1 ? ' item' : ' items'));
+
+    live.textContent = count === 0
+      ? 'Cart is empty.'
+      : 'Cart: ' + count + (count === 1 ? ' item, ' : ' items, ') + money(t.monthly) + ' per month' +
+        (t.once ? ', ' + money(t.once) + ' due today' : '') + '.';
+
+    goBtn.disabled = count === 0;
+    syncCards();
+
+    if (fid) {
+      var back = linesEl.querySelector('[data-fid="' + fid + '"]');
+      if (back && !back.disabled) back.focus();
+      else if (drawer.classList.contains('is-open')) $('#drawerClose').focus();
+    }
+  }
+
+  /* Card buttons follow the same prerequisites the rules enforce, so a
+     disabled button is never the only thing standing between a visitor and
+     an error message: the hint says why. */
+  function syncCards() {
+    var hasBase = false;
+    var hasStorefront = false;
+    items.forEach(function (it) {
+      var kind = Cart.CATALOG[it.key].kind;
+      if (kind === 'base' || kind === 'storefront-base') hasBase = true;
+      if (kind === 'storefront-base') hasStorefront = true;
+    });
+
+    $$('.add').forEach(function (btn) {
+      var key = btn.getAttribute('data-key');
+      var p = Cart.CATALOG[key];
+      if (!p) return;
+
+      var card = btn.closest('.card');
+      var inCart = items.some(function (it) { return it.key === key; });
+      if (card) card.classList.toggle('is-in', inCart);
+
+      var locked = (p.kind === 'addon' && !hasBase) ||
+                   (p.kind === 'storefront-addon' && !hasStorefront);
+      btn.disabled = locked;
+      if (card) card.classList.toggle('is-locked', locked);
+
+      var hint = card ? $('.card__hint', card) : null;
+      if (hint) {
+        hint.classList.toggle('is-lit', locked);
+        hint.textContent = locked ? hint.getAttribute('data-locked')
+                                  : (inCart ? 'In your cart' : 'Ready to add');
+      }
+
+      var stepper = card ? $('.stepper[data-stepper]', card) : null;
+      if (stepper) {
+        $$('.stepper__btn', stepper).forEach(function (b) { b.disabled = locked; });
+      }
+    });
+  }
+
+  /* ── mutations ───────────────────────────────────────────── */
+  function addKey(key, qty, btn) {
+    var before = JSON.stringify(items);
+    var result;
+    try {
+      result = Cart.add(items, key, qty);
+    } catch (e) {
+      toast(e.message, 'warn');
+      return;
+    }
+
+    items = result.items;
+    save();
+
+    if (result.replaced) {
+      toast('Swapped ' + result.replaced + ' for ' + Cart.CATALOG[key].name + '. One plan at a time.', 'warn');
+    }
+    if (result.dropped && result.dropped.length) {
+      toast('Removed ' + names(result.dropped) + ': it needs a Storefront plan.', 'warn');
+    }
+    if (!result.replaced && (!result.dropped || !result.dropped.length)) {
+      /* Re-adding a single-quantity line is a no-op in the rules, and saying
+         "Added" when nothing moved is how a store loses trust. */
+      toast(JSON.stringify(items) === before
+        ? Cart.CATALOG[key].name + ' is already in your cart.'
+        : 'Added ' + Cart.CATALOG[key].name + ' to your cart.');
+    }
+
+    if (btn) {
+      var label = $('.add__label', btn);
+      if (label) {
+        btn.classList.add('is-added');
+        label.textContent = 'Added';
+        setTimeout(function () {
+          btn.classList.remove('is-added');
+          label.textContent = 'Add to cart';
+        }, 1500);
+      }
+    }
+
+    fab.classList.remove('is-bumped');
+    void fab.offsetWidth;                 /* restart the bump animation */
+    fab.classList.add('is-bumped');
+
+    hideError();
+    render();
+  }
+
+  function removeKey(key) {
+    var name = Cart.CATALOG[key].name;
+    var out = Cart.remove(items, key);
+    items = out.items;
+    save();
+
+    if (out.dropped && out.dropped.length) {
+      toast('Removed ' + name + ', and ' + names(out.dropped) + ' with it.', 'warn');
+    } else {
+      toast('Removed ' + name + '.');
+    }
+    hideError();
+    render();
+  }
+
+  function setQty(key, qty) {
+    items = Cart.setQty(items, key, qty);
+    save();
+    hideError();
+    render();
+  }
+
+  /* ── drawer ──────────────────────────────────────────────── */
+  var lastFocus = null;
+
+  function focusables() {
+    return $$('button, [href], input, select, textarea, output[tabindex]', panel)
+      .filter(function (el) { return !el.disabled && el.offsetParent !== null; });
+  }
+
+  function openDrawer() {
+    if (drawer.classList.contains('is-open')) return;
+    lastFocus = document.activeElement;
+    drawer.classList.add('is-open');
+    fab.setAttribute('aria-expanded', 'true');
+    var close = $('#drawerClose');
+    if (close) close.focus();
+  }
+
+  function closeDrawer() {
+    if (!drawer.classList.contains('is-open')) return;
+    drawer.classList.remove('is-open');
+    fab.setAttribute('aria-expanded', 'false');
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+    else fab.focus();
+    lastFocus = null;
+  }
+
+  fab.addEventListener('click', openDrawer);
+  $('#drawerClose').addEventListener('click', closeDrawer);
+  $('#drawerScrim').addEventListener('click', closeDrawer);
+
+  document.addEventListener('keydown', function (e) {
+    if (!drawer.classList.contains('is-open')) return;
+
+    if (e.key === 'Escape') { e.preventDefault(); closeDrawer(); return; }
+    if (e.key !== 'Tab') return;
+
+    /* keep Tab inside the dialog while it is modal */
+    var list = focusables();
+    if (!list.length) return;
+    var first = list[0];
+    var last = list[list.length - 1];
+
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    else if (!panel.contains(document.activeElement)) { e.preventDefault(); first.focus(); }
+  });
+
+  /* ── errors in the drawer ────────────────────────────────── */
+  function showError(msg) {
+    errEl.textContent = msg;
+    errEl.hidden = false;
+  }
+  function hideError() {
+    errEl.textContent = '';
+    errEl.hidden = true;
+  }
+
+  /* ── checkout ────────────────────────────────────────────── */
+  var busy = false;
+
+  function setBusy(state) {
+    busy = state;
+    goBtn.disabled = state || items.length === 0;
+    goLabel.textContent = state ? 'Redirecting…' : 'Checkout';
+  }
+
+  function checkout() {
+    if (busy) return;
+    hideError();
+
+    var check = Cart.validate(items);
+    if (!check.ok) { showError(check.error); return; }
+
+    setBusy(true);
+
+    var payload = { items: items.map(function (it) { return { key: it.key, qty: it.qty }; }) };
+
+    fetch(API, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).then(function (res) {
+      return res.json().then(function (data) { return { ok: res.ok, data: data }; },
+                             function () { return { ok: res.ok, data: {} }; });
+    }).then(function (out) {
+      /* Any non-200 is the same story to the visitor: the body carries a
+         friendly sentence, and if it does not, ours does. */
+      if (out.ok && out.data && out.data.url) {
+        location.assign(out.data.url);
+        return;                            /* stay disabled through the redirect */
+      }
+      showError((out.data && out.data.error) || FALLBACK_ERR);
+      setBusy(false);
+    }).catch(function () {
+      showError(FALLBACK_ERR);
+      setBusy(false);
+    });
+  }
+
+  goBtn.addEventListener('click', checkout);
+
+  /* ── card wiring ─────────────────────────────────────────── */
+  $$('.card__hint').forEach(function (h) { h.setAttribute('data-locked', h.textContent.trim()); });
+
+  $$('.stepper[data-stepper]').forEach(function (st) {
+    var key = st.getAttribute('data-stepper');
+    var max = Cart.CATALOG[key] ? Cart.CATALOG[key].maxQty : 1;
+    var out = $('[data-qty]', st);
+
+    $$('.stepper__btn', st).forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var next = Number(out.textContent) + Number(btn.getAttribute('data-step'));
+        out.textContent = String(Math.min(max, Math.max(1, next)));
+      });
+    });
+  });
+
+  $$('.add').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var key = btn.getAttribute('data-key');
+      var card = btn.closest('.card');
+      var st = card ? $('.stepper[data-stepper]', card) : null;
+      var qty = st ? Number($('[data-qty]', st).textContent) : 1;
+      addKey(key, qty, btn);
+    });
+  });
+
+  /* ─────────────────────────────────────────────────────────────
+     3. RETURN FROM STRIPE
+     ───────────────────────────────────────────────────────────── */
+  function stateParam(name) {
+    var m = new RegExp('[?&]' + name + '=([^&#]*)').exec(location.search);
+    return m ? decodeURIComponent(m[1]) : null;
+  }
+
+  function stripParam(name) {
+    var search = location.search
+      .replace(new RegExp('([?&])' + name + '=[^&#]*(&|$)'), '$1')
+      .replace(/[?&]$/, '');
+    if (search === '?') search = '';
+    try {
+      history.replaceState(null, '', location.pathname + search + location.hash);
+    } catch (e) { /* file:// and old browsers: leave the URL alone */ }
+  }
+
+  function showState(kind) {
+    var wrap = $('#checkoutState');
+    var panelEl = $('#statePanel');
+
+    if (kind === 'success') {
+      panelEl.classList.remove('state--cancel');
+      $('#stateMark').textContent = 'Order received';
+      $('#stateTitle').textContent = 'You are in. Welcome aboard.';
+      $('#stateText').textContent =
+        'Stripe has your subscription and the receipt is on its way to your inbox. ' +
+        'I will email you within one business day to schedule onboarding and collect the access I need. ' +
+        'You can cancel or update your card any time from the billing portal link in that receipt.';
+    } else {
+      panelEl.classList.add('state--cancel');
+      $('#stateMark').textContent = 'Checkout cancelled';
+      $('#stateTitle').textContent = 'No charge was made.';
+      $('#stateText').textContent =
+        'Your cart is exactly where you left it, so you can pick up where you stopped. ' +
+        'If something in the pricing did not fit, tell me what you need and I will quote it.';
+    }
+
+    wrap.hidden = false;
+    document.body.classList.add('has-state');
+  }
+
+  /* ─────────────────────────────────────────────────────────────
+     4. BOOT
+     ───────────────────────────────────────────────────────────── */
+
+  /* Screenshot helper: seeds a demo cart so the drawer can be captured with
+     real content. Local files only, so it can never fire on the live site. */
+  var seeded = location.protocol === 'file:' && /(^|[?&])seed=demo\b/.test(location.search);
+
+  items = seeded
+    ? [{ key: 'storefront-build', qty: 1 }, { key: 'server-care', qty: 2 }, { key: 'workspace-admin', qty: 1 }]
+    : load();
+
+  (function returnState() {
+    var state = stateParam('checkout');
+    if (state !== 'success' && state !== 'cancelled') return;
+
+    if (state === 'success') {
+      items = [];                    /* paid for: the cart's work is done */
+      save();
+    }
+    showState(state);
+    stripParam('checkout');          /* a refresh must not repeat the message */
+  })();
+
+  render();
+
+  if (seeded) {
+    drawer.classList.add('is-open');
+    fab.setAttribute('aria-expanded', 'true');
+  }
+})();

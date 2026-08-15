@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Store | GenieSolos Tech</title>
+<meta name="description" content="Pick a GenieSolos Tech managed-service plan, add server, database, or workspace care, and check out securely. Monthly plans from $299, Storefront online stores from $499.">
+<meta name="author" content="Gene Garland">
+<link rel="canonical" href="https://geniesolos.com/store">
+<meta name="theme-color" content="#FAF5EC" id="themeColor">
+
+<!-- Applies the saved theme before first paint, same as the homepage, so a
+     dark-theme visitor never eats a cream flash. This block is byte-identical
+     to the one in index.html ON PURPOSE: the CloudFront CSP allows inline
+     scripts only by sha256 hash, and that hash covers exactly this text. Any
+     edit here must be mirrored in index.html AND in the CSP response headers
+     policy on the distribution. -->
+<script>
+(function () {
+  var pick = null;
+  var q = /[?&]theme=(dark|light)\b/.exec(location.search);   // shareable / testable
+  if (q) { pick = q[1]; }
+  else {
+    try { pick = localStorage.getItem('gs-theme'); } catch (e) { /* private mode */ }
+  }
+  if (pick === 'dark') {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    var m = document.getElementById('themeColor');
+    if (m) m.setAttribute('content', '#060807');
+  }
+})();
+</script>
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="Store | GenieSolos Tech">
+<meta property="og:description" content="Managed IT plans, Storefront online stores, and add-on care. Build a cart, check out once, and I handle the rest.">
+<meta property="og:url" content="https://geniesolos.com/store">
+<meta property="og:image" content="https://geniesolos.com/assets/og-card.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Store | GenieSolos Tech">
+<meta name="twitter:description" content="Managed IT plans, Storefront online stores, and add-on care. Build a cart, check out once, and I handle the rest.">
+<meta name="twitter:image" content="https://geniesolos.com/assets/og-card.png">
+
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/favicon.svg">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400;1,9..144,600&family=JetBrains+Mono:wght@300;400;500;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- The page's styles live in css/store.css, NOT inline: CloudFront attaches
+     a Content-Security-Policy with style-src 'self', which blocks inline
+     <style> blocks entirely. Same ?v= cache-busting rule as the homepage. -->
+<link rel="stylesheet" href="css/store.css?v=20260815">
+</head>
+<body>
+
+<a class="skip" href="#plans">Skip to the plans</a>
+
+<!-- ══════════ NAV ══════════ -->
+<header class="nav">
+  <a class="nav__brand" href="./">
+    <span class="nav__mark" aria-hidden="true">
+      <svg viewBox="0 0 32 32" width="26" height="26"><path d="M16 2 29 9.5v15L16 32 3 24.5v-15Z" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M16 9v7l6 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="16" cy="16" r="1.9" fill="currentColor"/></svg>
+    </span>
+    <span class="nav__name">GENIESOLOS</span>
+  </a>
+
+  <div class="nav__end">
+    <nav class="nav__links" aria-label="Primary">
+      <a href="terms">Terms</a>
+      <a href="./">Home</a>
+    </nav>
+    <button class="themetog" id="themeToggle" type="button" role="switch" aria-checked="false"
+            aria-label="Dark theme" title="Switch theme">
+      <span class="themetog__thumb" aria-hidden="true">
+        <svg class="themetog__ico themetog__ico--sun" viewBox="0 0 24 24" width="15" height="15">
+          <circle cx="12" cy="12" r="4.2" fill="currentColor"/>
+          <g stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M12 2.6v2.2M12 19.2v2.2M21.4 12h-2.2M4.8 12H2.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6M18.7 18.7l-1.6-1.6M6.9 6.9 5.3 5.3"/>
+          </g>
+        </svg>
+        <svg class="themetog__ico themetog__ico--moon" viewBox="0 0 24 24" width="15" height="15">
+          <path d="M20 14.2A8.4 8.4 0 0 1 9.8 4a8.4 8.4 0 1 0 10.2 10.2Z" fill="currentColor"/>
+        </svg>
+      </span>
+    </button>
+  </div>
+</header>
+
+<main>
+
+<!-- ══════════ RETURN STATE (filled in by js/store.js) ══════════ -->
+<section class="statewrap" id="checkoutState" hidden>
+  <div class="state" id="statePanel">
+    <p class="state__mark" id="stateMark" aria-hidden="true"></p>
+    <h2 class="state__title" id="stateTitle"></h2>
+    <p class="state__text" id="stateText"></p>
+    <p class="state__contact">
+      Questions? <a href="mailto:geniesolostech@gmail.com">geniesolostech@gmail.com</a>
+      &nbsp;|&nbsp; <a href="tel:+12403219004">240&#8209;321&#8209;9004</a>
+    </p>
+  </div>
+</section>
+
+<!-- ══════════ HERO ══════════ -->
+<section class="hero">
+  <div class="hero__glow" aria-hidden="true"></div>
+  <div class="hero__dots" aria-hidden="true"></div>
+
+  <div class="hero__inner">
+    <p class="hero__eyebrow"><span class="dot"></span>GENIESOLOS STORE</p>
+
+    <h1 class="hero__title">Pick your plan. <em>I handle the rest.</em></h1>
+
+    <p class="hero__blurb">
+      Managed IT for small businesses, priced in the open. Build a cart, check out once, and
+      the systems, the mailboxes, and the website stop being your problem. Everything here is
+      governed by the <a href="terms">Service Terms</a>.
+    </p>
+
+    <div class="hero__actions">
+      <a class="btn btn--solid" href="#plans">
+        <span>See the plans</span>
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+      <a class="btn btn--ghost" href="terms"><span>Read the Service Terms</span></a>
+    </div>
+
+    <ul class="hero__facts">
+      <li><b>One invoice</b><span>Everything on one monthly charge</span></li>
+      <li><b>Cancel from the portal</b><span>Self-serve, per the terms</span></li>
+      <li><b>Secure checkout</b><span>Card details never touch this site</span></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ══════════ RIBBON ══════════ -->
+<div class="ribbon" aria-hidden="true">
+  <div class="ribbon__track">
+    <span>MANAGED IT</span><i>◆</i><span>WORKSPACE ADMIN</span><i>◆</i><span>WEBSITE BUILDS</span><i>◆</i>
+    <span>SERVER CARE</span><i>◆</i><span>DATABASE CARE</span><i>◆</i><span>ONLINE STORES</span><i>◆</i>
+    <span>MIGRATIONS</span><i>◆</i><span>SECURITY PATCHING</span><i>◆</i>
+    <span>MANAGED IT</span><i>◆</i><span>WORKSPACE ADMIN</span><i>◆</i><span>WEBSITE BUILDS</span><i>◆</i>
+    <span>SERVER CARE</span><i>◆</i><span>DATABASE CARE</span><i>◆</i><span>ONLINE STORES</span><i>◆</i>
+    <span>MIGRATIONS</span><i>◆</i><span>SECURITY PATCHING</span><i>◆</i>
+  </div>
+</div>
+
+<!-- ══════════ PLANS ══════════ -->
+<section class="section" id="plans">
+  <div class="wrap">
+    <header class="shead" data-reveal>
+      <span class="shead__num">01</span>
+      <h2 class="shead__title"><span class="shead__plain">Monthly</span>&nbsp;<em>Plans</em></h2>
+      <span class="shead__rule"></span>
+    </header>
+
+    <p class="lede" data-reveal>
+      One plan at a time. Each tier includes everything in the one above it, so you are choosing
+      how fast I answer and how much of the stack I carry.
+    </p>
+
+    <div class="cards cards--3">
+
+      <article class="card" data-reveal>
+        <p class="card__kicker">Tier 01</p>
+        <h3 class="card__name">Lifeline</h3>
+        <p class="card__price"><b>$299</b><span>/month</span></p>
+        <p class="card__meta">10 users included, then $20/user/month</p>
+        <ul class="feats">
+          <li>Same-business-day initial response</li>
+          <li>Unlimited reasonable support requests, delivered remotely</li>
+          <li>Microsoft 365 or Google Workspace administration</li>
+          <li>Routine maintenance and patching in scheduled windows</li>
+        </ul>
+        <div class="card__foot">
+          <button class="btn btn--solid add" type="button" data-key="lifeline">
+            <span class="add__label">Add to cart</span>
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+          <a class="card__more" href="terms#plans">Details &rarr;</a>
+        </div>
+      </article>
+
+      <article class="card" data-reveal>
+        <p class="card__kicker">Tier 02</p>
+        <h3 class="card__name">Presence</h3>
+        <p class="card__price"><b>$649</b><span>/month</span></p>
+        <p class="card__meta">15 users included, then $25/user/month</p>
+        <p class="card__prev">Everything in Lifeline, plus:</p>
+        <ul class="feats">
+          <li>4-business-hour initial response</li>
+          <li>The same unlimited support scope, answered sooner</li>
+          <li>Workspace administration for every included seat</li>
+        </ul>
+        <div class="card__foot">
+          <button class="btn btn--solid add" type="button" data-key="presence">
+            <span class="add__label">Add to cart</span>
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+          <a class="card__more" href="terms#plans">Details &rarr;</a>
+        </div>
+      </article>
+
+      <article class="card card--feature" data-reveal>
+        <span class="card__badge">12&#8209;month term</span>
+        <p class="card__kicker">Tier 03</p>
+        <h3 class="card__name">Transformation</h3>
+        <p class="card__price"><b>$999</b><span>/month</span></p>
+        <p class="card__meta">20 users included, then $25/user/month</p>
+        <p class="card__prev">Everything in Presence, plus:</p>
+        <ul class="feats">
+          <li>1-hour response for emergencies, 24/7</li>
+          <li>A website build included in the plan</li>
+          <li>Website ownership transfers after month 12</li>
+        </ul>
+        <div class="card__foot">
+          <button class="btn btn--solid add" type="button" data-key="transformation">
+            <span class="add__label">Add to cart</span>
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+          <a class="card__more" href="terms#plans">Details &rarr;</a>
+        </div>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ STOREFRONT ══════════ -->
+<section class="section section--alt" id="storefront">
+  <div class="wrap">
+    <header class="shead" data-reveal>
+      <span class="shead__num">02</span>
+      <h2 class="shead__title"><em>Storefront</em></h2>
+      <span class="shead__rule"></span>
+    </header>
+
+    <p class="lede" data-reveal>
+      A standalone package for online-only businesses: the store gets built, hosted, and cared for.
+      Payments run through your own merchant account, so you stay the merchant of record.
+    </p>
+
+    <div class="cards cards--2">
+
+      <article class="card" data-reveal>
+        <span class="card__badge">12&#8209;month term</span>
+        <p class="card__kicker">Zero down</p>
+        <h3 class="card__name">Storefront</h3>
+        <p class="card__price"><b>$499</b><span>/month</span></p>
+        <p class="card__meta">No upfront build cost</p>
+        <ul class="feats">
+          <li>Online store designed and built with nothing due today</li>
+          <li>Hosting, maintenance, and support included</li>
+          <li>4-business-hour initial response</li>
+          <li>Website ownership transfers after month 12</li>
+        </ul>
+        <div class="card__foot">
+          <button class="btn btn--solid add" type="button" data-key="storefront-zero">
+            <span class="add__label">Add to cart</span>
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+          <a class="card__more" href="terms#plans">Details &rarr;</a>
+        </div>
+      </article>
+
+      <article class="card" data-reveal>
+        <span class="card__badge card__badge--sun">Due today $4,500</span>
+        <p class="card__kicker">Build + care</p>
+        <h3 class="card__name">Storefront</h3>
+        <p class="card__price"><b>$4,500</b><span>once, then $149/month</span></p>
+        <p class="card__meta">Month-to-month after the build</p>
+        <ul class="feats">
+          <li>One-time build fee, billed with your first month</li>
+          <li>Hosting, maintenance, and support included</li>
+          <li>4-business-hour initial response</li>
+          <li>Website ownership transfers when the build fee is paid in full</li>
+        </ul>
+        <div class="card__foot">
+          <button class="btn btn--solid add" type="button" data-key="storefront-build">
+            <span class="add__label">Add to cart</span>
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+          <a class="card__more" href="terms#plans">Details &rarr;</a>
+        </div>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ ADD-ONS ══════════ -->
+<section class="section" id="addons">
+  <div class="wrap">
+    <header class="shead" data-reveal>
+      <span class="shead__num">03</span>
+      <h2 class="shead__title"><em>Add&#8209;ons</em></h2>
+      <span class="shead__rule"></span>
+    </header>
+
+    <p class="lede" data-reveal>
+      Bolt these onto a plan. They unlock once the plan they depend on is in your cart, which is
+      the same rule the checkout enforces.
+    </p>
+
+    <div class="cards cards--3">
+
+      <article class="card card--addon" data-reveal>
+        <p class="card__kicker">Per server</p>
+        <h3 class="card__name">Server Care</h3>
+        <p class="card__price"><b>$225</b><span>/month each</span></p>
+        <p class="card__desc">Patching, hardening, configuration, and routine maintenance for one server.</p>
+
+        <div class="stepper" data-stepper="server-care">
+          <span class="stepper__label" id="qtyLabelServer">Servers</span>
+          <button class="stepper__btn" type="button" data-step="-1" aria-label="One fewer server">
+            <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M5 12h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+          </button>
+          <output class="stepper__val" data-qty aria-labelledby="qtyLabelServer">1</output>
+          <button class="stepper__btn" type="button" data-step="1" aria-label="One more server">
+            <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+
+        <div class="card__foot">
+          <button class="btn btn--solid add" type="button" data-key="server-care" aria-describedby="hintServer">
+            <span class="add__label">Add to cart</span>
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+          <p class="card__hint" id="hintServer" data-hint-for="server-care">Needs a plan in your cart</p>
+        </div>
+      </article>
+
+      <article class="card card--addon" data-reveal>
+        <p class="card__kicker">Per instance</p>
+        <h3 class="card__name">Database Care</h3>
+        <p class="card__price"><b>$175</b><span>/month each</span></p>
+        <p class="card__desc">Backups, updates, and routine maintenance for one database instance.</p>
+
+        <div class="stepper" data-stepper="db-care">
+          <span class="stepper__label" id="qtyLabelDb">Instances</span>
+          <button class="stepper__btn" type="button" data-step="-1" aria-label="One fewer instance">
+            <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M5 12h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+          </button>
+          <output class="stepper__val" data-qty aria-labelledby="qtyLabelDb">1</output>
+          <button class="stepper__btn" type="button" data-step="1" aria-label="One more instance">
+            <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+
+        <div class="card__foot">
+          <button class="btn btn--solid add" type="button" data-key="db-care" aria-describedby="hintDb">
+            <span class="add__label">Add to cart</span>
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+          <p class="card__hint" id="hintDb" data-hint-for="db-care">Needs a plan in your cart</p>
+        </div>
+      </article>
+
+      <article class="card card--addon" data-reveal>
+        <p class="card__kicker">Storefront only</p>
+        <h3 class="card__name">Workspace Admin</h3>
+        <p class="card__price"><b>$199</b><span>/month</span></p>
+        <p class="card__desc">Adds full Microsoft 365 or Google Workspace administration to a Storefront plan: users, mailboxes, licensing, and permissions.</p>
+
+        <div class="card__foot">
+          <button class="btn btn--solid add" type="button" data-key="workspace-admin" aria-describedby="hintWorkspace">
+            <span class="add__label">Add to cart</span>
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+          <p class="card__hint" id="hintWorkspace" data-hint-for="workspace-admin">Requires a Storefront plan</p>
+        </div>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ QUOTED WORK ══════════ -->
+<section class="section section--alt" id="quoted">
+  <div class="wrap">
+    <header class="shead" data-reveal>
+      <span class="shead__num">04</span>
+      <h2 class="shead__title"><span class="shead__plain">Quoted</span>&nbsp;<em>work</em></h2>
+      <span class="shead__rule"></span>
+    </header>
+
+    <p class="lede" data-reveal>
+      Two things do not belong in a cart, because the number depends on what you have. Tell me the
+      shape of it and you get a real quote back, not a range.
+    </p>
+
+    <div class="cards cards--2">
+
+      <article class="card card--quote" data-reveal>
+        <p class="card__kicker">Project</p>
+        <h3 class="card__name">Migration projects</h3>
+        <p class="card__price"><b>$1,500&ndash;$4,500</b><span>typical</span></p>
+        <p class="card__desc">
+          New system rollouts and migrations: mail and files onto Microsoft 365 or Google Workspace,
+          servers to the cloud, one platform to another. Scoped and quoted per project.
+        </p>
+        <div class="card__foot">
+          <a class="btn btn--ghost" href="mailto:geniesolostech@gmail.com?subject=Quote%20request">
+            <span>Email me for a quote</span>
+          </a>
+        </div>
+      </article>
+
+      <article class="card card--quote" data-reveal>
+        <p class="card__kicker">Pass-through</p>
+        <h3 class="card__name">M365 &amp; Google licenses</h3>
+        <p class="card__price"><b>At list</b><span>billed at cost</span></p>
+        <p class="card__desc">
+          Licenses bought on your behalf are billed at list price and added to your invoice.
+          Anything over $100 gets your approval first, per the terms.
+        </p>
+        <div class="card__foot">
+          <a class="btn btn--ghost" href="mailto:geniesolostech@gmail.com?subject=Quote%20request">
+            <span>Email me for a quote</span>
+          </a>
+        </div>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ══════════ FOOTER ══════════ -->
+<footer class="foot">
+  <div class="foot__inner">
+    <p class="foot__sig">GENIESOLOS&nbsp;TECH</p>
+    <p class="foot__meta">Store</p>
+    <p class="foot__contact">
+      <a href="https://geniesolos.com">geniesolos.com</a> &nbsp;|&nbsp;
+      <a href="mailto:geniesolostech@gmail.com">geniesolostech@gmail.com</a> &nbsp;|&nbsp;
+      <a href="tel:+12403219004">240&#8209;321&#8209;9004</a>
+    </p>
+    <p class="foot__home"><a href="terms">Service Terms</a> &nbsp;|&nbsp; <a href="./">&larr; Back to geniesolos.com</a></p>
+  </div>
+</footer>
+
+<!-- ══════════ CART ══════════ -->
+<button class="cartfab" id="cartFab" type="button" aria-expanded="false" aria-controls="cartDrawer">
+  <span class="cartfab__ico" aria-hidden="true">
+    <svg viewBox="0 0 24 24" width="20" height="20"><path d="M4 5h2.2l2.1 10.2h9.1l1.9-7.4H7.3" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><circle cx="10" cy="19" r="1.5" fill="currentColor"/><circle cx="17" cy="19" r="1.5" fill="currentColor"/></svg>
+  </span>
+  <span class="cartfab__label">Cart</span>
+  <span class="cartfab__badge" id="cartBadge" aria-hidden="true">0</span>
+</button>
+
+<p class="sr-only" id="cartLive" role="status" aria-live="polite"></p>
+<div class="toasts" id="toasts" aria-live="polite" aria-atomic="false"></div>
+
+<div class="drawer" id="cartDrawer">
+  <div class="drawer__scrim" id="drawerScrim"></div>
+
+  <aside class="drawer__panel" role="dialog" aria-modal="true" aria-labelledby="drawerTitle">
+    <header class="drawer__head">
+      <div>
+        <p class="drawer__eyebrow">GS&#8209;CART</p>
+        <h2 class="drawer__title" id="drawerTitle">Your cart</h2>
+      </div>
+      <button class="drawer__close" id="drawerClose" type="button" aria-label="Close cart">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+    </header>
+
+    <div class="drawer__body" id="cartBody">
+      <div class="cart-empty" id="cartEmpty">
+        <p class="cart-empty__mark" aria-hidden="true">&#9671;</p>
+        <p class="cart-empty__title">Your cart is empty.</p>
+        <p class="cart-empty__text">Pick a plan first, then the add-ons unlock.</p>
+      </div>
+      <ul class="lines" id="cartLines"></ul>
+    </div>
+
+    <footer class="drawer__foot">
+      <p class="drawer__err" id="cartError" role="alert" hidden></p>
+
+      <dl class="totals">
+        <div class="totals__row">
+          <dt>Monthly</dt>
+          <dd id="totalMonthly">$0</dd>
+        </div>
+        <div class="totals__row totals__row--once" id="onceRow" hidden>
+          <dt>Due today</dt>
+          <dd id="totalOnce">$0</dd>
+        </div>
+      </dl>
+
+      <button class="btn btn--solid drawer__go" id="checkoutBtn" type="button">
+        <span class="drawer__go-label">Checkout</span>
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+
+      <p class="drawer__terms">By checking out you agree to the <a href="terms">Service Terms</a>.</p>
+    </footer>
+  </aside>
+</div>
+
+<script src="js/store-cart.js?v=20260815"></script>
+<script src="js/store.js?v=20260815"></script>
+
+</body>
+</html>
