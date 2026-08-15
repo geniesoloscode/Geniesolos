@@ -481,10 +481,19 @@ try {
     if ($DryRun) {
         Ok 'skipped for dry run'
     } else {
+        # SHA-256 of the empty string. CloudFront's OAC signs the request to the
+        # function URL with whatever x-amz-content-sha256 the caller sent; it
+        # does not compute one, and Lambda function URLs refuse UNSIGNED-PAYLOAD.
+        # A POST without this header is a 403 that never reaches the handler, so
+        # every curl/Invoke-WebRequest against /api/* must carry it. The store
+        # page computes the same value in js/store.js.
+        $EmptyBodySha256 = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
+
         # Empty body: JSON.parse('') fails before any Stripe call, so this
         # proves routing + Lambda + validation without spending a Stripe call.
         try {
             $r1 = Invoke-WebRequest -Method Post -Uri 'https://geniesolos.com/api/checkout' -Body '' `
+                -Headers @{ 'x-amz-content-sha256' = $EmptyBodySha256 } `
                 -UseBasicParsing -SkipHttpErrorCheck -TimeoutSec 30
             if ($r1.StatusCode -eq 400) { Ok 'POST /api/checkout (empty body) -> 400 as expected' }
             else { Warn "POST /api/checkout (empty body) -> $($r1.StatusCode), expected 400" }
@@ -498,6 +507,7 @@ try {
         if ($FunctionUrl) {
             try {
                 $r2 = Invoke-WebRequest -Method Post -Uri $FunctionUrl -Body '' `
+                    -Headers @{ 'x-amz-content-sha256' = $EmptyBodySha256 } `
                     -UseBasicParsing -SkipHttpErrorCheck -TimeoutSec 30
                 if ($r2.StatusCode -eq 403) { Ok "POST $FunctionUrl (unsigned) -> 403 as expected" }
                 else { Warn "POST $FunctionUrl (unsigned) -> $($r2.StatusCode), expected 403" }

@@ -442,9 +442,14 @@ td:first-child { color: var(--ink); font-weight: 600; }
     gap: 0 18px;
   }
 }
+/* Narrow phones: "← Back to site" is swapped for the one word "Home" so the
+   nav still fits the Store link and the theme toggle. Both rules are scoped to
+   the back-to-site link by its href; unscoped they also emptied the Store link
+   and appended "Home" to it, which rendered "STOREHOME" and pushed the toggle
+   off the screen. Any further nav__back link needs no rule here. */
 @media (max-width: 560px) {
-  .nav__back span { display: none; }
-  .nav__back::after { content: 'Home'; }
+  .nav__back[href="./"] span { display: none; }
+  .nav__back[href="./"]::after { content: 'Home'; }
 }
 
 @media (prefers-reduced-motion: reduce) {

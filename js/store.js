@@ -539,6 +539,38 @@
     goLabel.textContent = state ? 'Redirecting…' : 'Checkout';
   }
 
+  /* CloudFront's origin access control signs the request to the Lambda function
+     URL with sigv4, but it does NOT hash the body: it forwards whatever
+     x-amz-content-sha256 the viewer sent and signs that value. Lambda function
+     URLs reject UNSIGNED-PAYLOAD, so a POST with no such header is a 403 that
+     never reaches the handler. The header is same-origin and on the sigv4
+     safelist, so it triggers no preflight.
+
+     Insecure origins have no crypto.subtle. There the header is omitted rather
+     than thrown: local http:// testing hits a dev server, not OAC, and the
+     shipped site is https where the digest always exists. */
+  function bodyHash(body) {
+    var subtle = window.crypto && window.crypto.subtle;
+    if (!subtle || typeof window.TextEncoder !== 'function') return Promise.resolve(null);
+
+    var digest;
+    try {
+      digest = subtle.digest('SHA-256', new TextEncoder().encode(body));
+    } catch (e) {
+      return Promise.resolve(null);
+    }
+    if (!digest || typeof digest.then !== 'function') return Promise.resolve(null);
+
+    return digest.then(function (buf) {
+      var bytes = new Uint8Array(buf);
+      var hex = '';
+      for (var i = 0; i < bytes.length; i++) {
+        hex += (bytes[i] < 16 ? '0' : '') + bytes[i].toString(16);
+      }
+      return hex;
+    }, function () { return null; });
+  }
+
   function checkout() {
     if (busy) return;
     hideError();
@@ -549,11 +581,13 @@
     setBusy(true);
 
     var payload = { items: items.map(function (it) { return { key: it.key, qty: it.qty }; }) };
+    var body = JSON.stringify(payload);
 
-    fetch(API, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(payload)
+    /* The hash must cover the exact bytes sent, so hash `body` and post `body`. */
+    bodyHash(body).then(function (hash) {
+      var headers = { 'content-type': 'application/json' };
+      if (hash) headers['x-amz-content-sha256'] = hash;
+      return fetch(API, { method: 'POST', headers: headers, body: body });
     }).then(function (res) {
       return res.json().then(function (data) { return { ok: res.ok, data: data }; },
                              function () { return { ok: res.ok, data: {} }; });
@@ -573,6 +607,17 @@
   }
 
   goBtn.addEventListener('click', checkout);
+
+  /* Leaving for Stripe deliberately leaves the button disabled and reading
+     "Redirecting…". Coming back with the browser's Back button can restore this
+     page from the bfcache with that state frozen in place and no script rerun,
+     which would strand the visitor at a dead Checkout button. A persisted
+     pageshow is the one signal for that, so undo the redirect state there. */
+  window.addEventListener('pageshow', function (e) {
+    if (!e.persisted) return;
+    hideError();
+    setBusy(false);
+  });
 
   /* ── card wiring ─────────────────────────────────────────── */
   $$('.card__hint').forEach(function (h) { h.setAttribute('data-locked', h.textContent.trim()); });

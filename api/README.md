@@ -20,6 +20,35 @@ POST https://geniesolos.com/api/checkout
 502 { "error": "Payment setup failed. ..." }          Stripe was unreachable or refused
 ```
 
+## `x-amz-content-sha256` is required on every POST
+
+The function URL is reachable only through CloudFront, whose origin access control signs
+each request to it with sigv4. OAC signs the headers it forwards; it does **not** hash the
+request body, and Lambda function URLs reject `UNSIGNED-PAYLOAD`. So the *viewer* has to
+supply the payload hash:
+
+```
+x-amz-content-sha256: <lowercase hex SHA-256 of the exact request body bytes>
+```
+
+A POST without it is a **403 from AWS** that never reaches `index.mjs`, so it carries none
+of the JSON errors above. The store page does this for you: `checkout()` in `js/store.js`
+digests the exact body string with `crypto.subtle.digest('SHA-256', ...)` and sets the
+header before `fetch`. Anything hand-rolled must send it too.
+
+```bash
+BODY='{"items":[{"key":"storefront-build","qty":1}]}'
+curl -sS https://geniesolos.com/api/checkout \
+  -H 'content-type: application/json' \
+  -H "x-amz-content-sha256: $(printf %s "$BODY" | openssl dgst -sha256 -r | cut -d' ' -f1)" \
+  -d "$BODY"
+```
+
+The empty body's hash is the constant
+`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`, which is what the
+smoke tests in `scripts/setup-aws.ps1` send. Hash the bytes you actually send: a body and a
+header that disagree fail the same way as a missing header.
+
 The client never sends prices, and this function never reads them from the request. Only
 `key` and `qty` are taken from each item; every other field, at the top level or inside an
 item, is dropped. Amounts live in Stripe and are reached through `PRICE_MAP` alone.

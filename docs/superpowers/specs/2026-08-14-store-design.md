@@ -155,3 +155,11 @@ form-encoded bodies):
   CloudFront origin custom headers and checked in the Lambda.
 - If a future page needs Stripe.js embedded (not planned), the CSP response
   headers policy must change; current design avoids that entirely.
+- OAC signs requests to the function URL but does not hash bodies, and Lambda
+  function URLs refuse `UNSIGNED-PAYLOAD`: every POST to `/api/*` must carry
+  `x-amz-content-sha256` with the hex SHA-256 of the exact body, supplied by the
+  caller. `js/store.js` computes it with `crypto.subtle`; scripts and curl calls
+  must set it explicitly (empty body =
+  `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`). Without
+  it AWS answers 403 before the handler runs, so the failure looks like a
+  routing or origin problem rather than a missing header.
