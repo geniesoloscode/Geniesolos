@@ -813,21 +813,27 @@ try {
     # TWO public statements, same hard-won rule as step 4: function URLs
     # created after Oct 2025 authorize lambda:InvokeFunctionUrl at the front
     # door AND lambda:InvokeFunction at invocation, and granting only one of
-    # them 403s every Stripe delivery. --function-url-auth-type NONE is what
-    # makes principal '*' legal on an unauthenticated URL - do not drop it
-    # or either statement.
+    # them 403s every Stripe delivery. --function-url-auth-type NONE makes
+    # principal '*' legal on the unauthenticated URL, but AWS only accepts
+    # that flag on the InvokeFunctionUrl action (observed 2026-08-15:
+    # InvalidParameterValueException on InvokeFunction). The InvokeFunction
+    # statement is therefore unconditioned; the handler's Stripe-signature
+    # gate is what keeps a direct invoke harmless.
     $WebhookPermStatements = @(
-        @{ Sid = 'public-url-invoke'; Action = 'lambda:InvokeFunctionUrl' },
-        @{ Sid = 'public-fn-invoke';  Action = 'lambda:InvokeFunction' }
+        @{ Sid = 'public-url-invoke'; Action = 'lambda:InvokeFunctionUrl'; UrlAuth = $true },
+        @{ Sid = 'public-fn-invoke';  Action = 'lambda:InvokeFunction';    UrlAuth = $false }
     )
     foreach ($stmt in $WebhookPermStatements) {
         if ($DryRun) {
-            Would "add-permission $($stmt.Sid) ($($stmt.Action), principal *, function-url-auth-type NONE)"
+            $flagNote = if ($stmt.UrlAuth) { ', function-url-auth-type NONE' } else { '' }
+            Would "add-permission $($stmt.Sid) ($($stmt.Action), principal *$flagNote)"
             continue
         }
-        $wpRaw  = aws lambda add-permission --function-name $WebhookFnName --statement-id $stmt.Sid `
-            --action $stmt.Action --principal '*' --function-url-auth-type NONE `
-            --region $Region --output json 2>&1
+        $wpArgs = @('lambda', 'add-permission', '--function-name', $WebhookFnName,
+                    '--statement-id', $stmt.Sid, '--action', $stmt.Action, '--principal', '*',
+                    '--region', $Region, '--output', 'json')
+        if ($stmt.UrlAuth) { $wpArgs += @('--function-url-auth-type', 'NONE') }
+        $wpRaw  = aws @wpArgs 2>&1
         $wpExit = $LASTEXITCODE
         $wp     = $wpRaw -join "`n"
         if ($wpExit -eq 0) {
