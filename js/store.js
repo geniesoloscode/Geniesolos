@@ -211,19 +211,25 @@
     '<path d="M5 12h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
   var ICON_PLUS = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">' +
     '<path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
+  /* Smaller than the minus on purpose: at quantity one the minus becomes a
+     remove control, and the size shift plus the red tint mark the change. */
+  var ICON_X = '<svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true">' +
+    '<path d="M7 7l10 10M17 7 7 17" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>';
 
   function makeStepper(key, qty, label, fidPrefix) {
     var max = Cart.CATALOG[key].maxQty;
     var wrap = document.createElement('div');
     wrap.className = 'stepper';
 
+    /* A disabled minus at quantity one is a dead end; instead it stays live
+       and removes the line, which is what "one fewer than one" means. */
     var minus = document.createElement('button');
     minus.type = 'button';
-    minus.className = 'stepper__btn';
-    minus.setAttribute('aria-label', 'One fewer ' + label);
+    minus.className = 'stepper__btn' + (qty <= 1 ? ' stepper__btn--rm' : '');
+    minus.setAttribute('aria-label', qty <= 1 ? 'Remove ' + label + ' from the cart'
+                                              : 'One fewer ' + label);
     minus.setAttribute('data-fid', fidPrefix + '-minus-' + key);
-    minus.innerHTML = ICON_MINUS;
-    minus.disabled = qty <= 1;
+    minus.innerHTML = qty <= 1 ? ICON_X : ICON_MINUS;
 
     var val = document.createElement('output');
     val.className = 'stepper__val';
@@ -242,7 +248,10 @@
     wrap.appendChild(val);
     wrap.appendChild(plus);
 
-    minus.addEventListener('click', function () { setQty(key, qty - 1); });
+    minus.addEventListener('click', function () {
+      if (qty <= 1) removeKey(key);
+      else setQty(key, qty - 1);
+    });
     plus.addEventListener('click', function () { setQty(key, qty + 1); });
     return wrap;
   }
@@ -282,7 +291,7 @@
     var rm = document.createElement('button');
     rm.type = 'button';
     rm.className = 'line__rm';
-    rm.textContent = 'Remove';
+    rm.innerHTML = ICON_X + '<span>Remove</span>';
     rm.setAttribute('aria-label', 'Remove ' + p.name + ' from the cart');
     rm.setAttribute('data-fid', 'line-rm-' + item.key);
     rm.addEventListener('click', function () { removeKey(item.key); });
@@ -298,6 +307,13 @@
        it and hand it back to the control with the same identity. */
     var active = document.activeElement;
     var fid = active && active.getAttribute ? active.getAttribute('data-fid') : null;
+    /* When a removal takes the whole line with it, remember where that line
+       sat so focus can land on the neighbour that slides into its place. */
+    var lineAt = -1;
+    if (fid && active.closest) {
+      var lineEl = active.closest('.line');
+      if (lineEl) lineAt = $$('.line', linesEl).indexOf(lineEl);
+    }
 
     while (linesEl.firstChild) linesEl.removeChild(linesEl.firstChild);
     items.forEach(function (item) { linesEl.appendChild(lineNode(item)); });
@@ -321,13 +337,31 @@
       : 'Cart: ' + count + (count === 1 ? ' item, ' : ' items, ') + money(t.monthly) + ' per month' +
         (t.once ? ', ' + money(t.once) + ' due today' : '') + '.';
 
-    goBtn.disabled = count === 0;
+    /* `busy` guards the button too: a storage event from another tab can
+       re-render mid-checkout and must not resurrect a live Checkout. */
+    goBtn.disabled = busy || count === 0;
     syncCards();
 
     if (fid) {
       var back = linesEl.querySelector('[data-fid="' + fid + '"]');
       if (back && !back.disabled) back.focus();
-      else if (drawer.classList.contains('is-open')) $('#drawerClose').focus();
+      else if (drawer.classList.contains('is-open')) {
+        if (back) {
+          $('#drawerClose').focus();       /* still present, just disabled */
+        } else {
+          /* the control left with its line: aim at the line now in that
+             slot, the last line if it was last, or the empty state */
+          var linesNow = $$('.line', linesEl);
+          if (linesNow.length) {
+            var at = Math.max(0, Math.min(lineAt, linesNow.length - 1));
+            var rmNext = $('.line__rm', linesNow[at]);
+            if (rmNext) rmNext.focus();
+            else $('#drawerClose').focus();
+          } else {
+            emptyEl.focus();
+          }
+        }
+      }
     }
   }
 
@@ -371,7 +405,22 @@
         }
         $$('.stepper__btn', stepper).forEach(function (b) {
           var step = Number(b.getAttribute('data-step'));
-          b.disabled = locked || (step < 0 ? shown <= 1 : shown >= p.maxQty);
+          if (step < 0) {
+            /* On an in-cart card the minus never dead-ends: at one it
+               becomes the remove control. As a plain chooser (nothing in
+               the cart yet) it still stops at one. */
+            var asRemove = inCart && shown <= 1;
+            b.disabled = locked || (!inCart && shown <= 1);
+            if (b.classList.contains('stepper__btn--rm') !== asRemove) {
+              b.classList.toggle('stepper__btn--rm', asRemove);
+              b.innerHTML = asRemove ? ICON_X : ICON_MINUS;
+              b.setAttribute('aria-label', asRemove
+                ? 'Remove ' + p.name + ' from the cart'
+                : b.getAttribute('data-label-default') || 'One fewer ' + p.name);
+            }
+          } else {
+            b.disabled = locked || shown >= p.maxQty;
+          }
         });
       }
 
@@ -382,6 +431,10 @@
         hint.textContent = locked ? hint.getAttribute('data-locked')
                                   : (inCart ? inCartText : 'Ready to add');
       }
+
+      /* the card-level exit only shows while there is something to exit */
+      var rmLink = card ? $('.card__rm', card) : null;
+      if (rmLink) rmLink.hidden = !inCart;
     });
   }
 
@@ -472,6 +525,16 @@
     hideError();
     render();
   }
+
+  /* Another tab can rewrite the cart at any moment, and acting on a stale
+     copy here would resurrect lines the visitor already removed there. The
+     storage event fires only in the tabs that did NOT write, so re-loading
+     and re-rendering can never feed back. A null key is a wholesale clear. */
+  window.addEventListener('storage', function (e) {
+    if (e.key !== null && e.key !== STORE_KEY) return;
+    items = load();
+    render();
+  });
 
   /* ── drawer ──────────────────────────────────────────────── */
   var lastFocus = null;
@@ -632,12 +695,20 @@
     if (!Cart.CATALOG[key] || !out) return;
 
     $$('.stepper__btn', st).forEach(function (btn) {
+      /* syncCards swaps the minus into a remove control at quantity one;
+         keep the words it needs to put back afterwards. */
+      btn.setAttribute('data-label-default', btn.getAttribute('aria-label'));
       btn.addEventListener('click', function () {
-        var next = clampQty(key, Number(out.textContent) + Number(btn.getAttribute('data-step')));
-        if (lineFor(key)) {
-          setQty(key, next);           /* render() puts the number back on the card */
+        var step = Number(btn.getAttribute('data-step'));
+        var line = lineFor(key);
+        if (line && line.qty <= 1 && step < 0) {
+          /* at one, the in-cart card's minus removes, same as the drawer;
+             afterwards the stepper is a chooser again, back at one */
+          removeKey(key);
+        } else if (line) {
+          setQty(key, clampQty(key, Number(out.textContent) + step));
         } else {
-          out.textContent = String(next);
+          out.textContent = String(clampQty(key, Number(out.textContent) + step));
           syncCards();
         }
         /* Hitting a bound disables the button under the pointer; keyboard
@@ -658,6 +729,30 @@
       var qty = st ? Number($('[data-qty]', st).textContent) : 1;
       addKey(key, qty, btn);
     });
+  });
+
+  /* Every in-cart card carries its own way out, next to Add. A separate
+     control rather than a toggle on Add itself: an accidental double-click
+     on Add must never turn into a removal. syncCards shows and hides it. */
+  $$('.add').forEach(function (btn) {
+    var key = btn.getAttribute('data-key');
+    if (!Object.prototype.hasOwnProperty.call(Cart.CATALOG, key)) return;
+    var card = btn.closest('.card');
+    if (!card) return;
+
+    var rm = document.createElement('button');
+    rm.type = 'button';
+    rm.className = 'card__rm';
+    rm.innerHTML = ICON_X + '<span>Remove from cart</span>';
+    rm.setAttribute('aria-label', 'Remove ' + Cart.CATALOG[key].name + ' from the cart');
+    rm.hidden = true;
+    rm.addEventListener('click', function () {
+      removeKey(key);
+      /* the link hides itself with the removal; keyboard focus must not
+         fall off the page with it */
+      if (rm.hidden && !btn.disabled) btn.focus();
+    });
+    btn.parentNode.insertBefore(rm, btn.nextSibling);
   });
 
   /* ─────────────────────────────────────────────────────────────

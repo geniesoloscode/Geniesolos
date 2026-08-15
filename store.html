@@ -51,7 +51,7 @@
 <!-- The page's styles live in css/store.css, NOT inline: CloudFront attaches
      a Content-Security-Policy with style-src 'self', which blocks inline
      <style> blocks entirely. Same ?v= cache-busting rule as the homepage. -->
-<link rel="stylesheet" href="css/store.css?v=20260815">
+<link rel="stylesheet" href="css/store.css?v=20260816">
 </head>
 <body>
 
@@ -470,7 +470,9 @@
     </header>
 
     <div class="drawer__body" id="cartBody">
-      <div class="cart-empty" id="cartEmpty">
+      <!-- tabindex=-1: after the last line is removed, js/store.js parks
+           focus here rather than letting it fall to <body> -->
+      <div class="cart-empty" id="cartEmpty" tabindex="-1">
         <p class="cart-empty__mark" aria-hidden="true">&#9671;</p>
         <p class="cart-empty__title">Your cart is empty.</p>
         <p class="cart-empty__text">Pick a plan first, then the add-ons unlock.</p>
@@ -503,7 +505,7 @@
 </div>
 
 <script src="js/store-cart.js?v=20260815"></script>
-<script src="js/store.js?v=20260815"></script>
+<script src="js/store.js?v=20260816"></script>
 
 </body>
 </html>

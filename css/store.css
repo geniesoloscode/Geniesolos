@@ -727,6 +727,26 @@ html { scrollbar-color: var(--violet-bright) var(--cream-2); }
 }
 .card__hint.is-lit { color: var(--amber-deep); }
 
+/* the in-cart card's exit, injected by js/store.js: quiet mono text in the
+   same red as the drawer's Remove, with the same 44px effective reach */
+.card__rm {
+  position: relative;
+  display: inline-flex; align-items: center; gap: 6px;
+  min-height: 32px;
+  font-family: var(--mono); font-size: 11.5px; font-weight: 700; letter-spacing: .06em;
+  color: #B3261E;
+  padding: 4px 10px;
+  border-radius: 999px;
+  transition: color .2s, background .2s;
+}
+.card__rm::before {
+  content: ''; position: absolute; left: 0; right: 0;
+  top: 50%; height: 44px; transform: translateY(-50%);
+}
+.card__rm:hover { background: rgba(179, 38, 30, .08); }
+:root[data-theme="dark"] .card__rm { color: #ff8f7a; }
+:root[data-theme="dark"] .card__rm:hover { background: rgba(255, 143, 122, .1); }
+
 /* add-to-cart: the micro-interaction is the whole reward */
 .add { min-width: 152px; }
 .add.is-added {
@@ -782,6 +802,11 @@ html { scrollbar-color: var(--violet-bright) var(--cream-2); }
 }
 .stepper__btn:hover { background: var(--lilac); border-color: rgba(124, 58, 237, .35); transform: scale(1.08); }
 .stepper__btn[disabled] { opacity: .4; cursor: not-allowed; transform: none; }
+/* at quantity one the minus is a removal, and it says so before it is pressed */
+.stepper__btn--rm { color: #B3261E; border-color: rgba(179, 38, 30, .35); }
+.stepper__btn--rm:hover { color: #B3261E; background: rgba(179, 38, 30, .08); border-color: #B3261E; }
+:root[data-theme="dark"] .stepper__btn--rm { color: #ff8f7a; border-color: rgba(255, 143, 122, .35); }
+:root[data-theme="dark"] .stepper__btn--rm:hover { color: #ff8f7a; background: rgba(255, 143, 122, .1); border-color: #ff8f7a; }
 .stepper__val {
   font-family: var(--mono); font-size: 14px; font-weight: 700;
   color: var(--ink);
@@ -955,15 +980,29 @@ html { scrollbar-color: var(--violet-bright) var(--cream-2); }
 .line__ctl { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 4px; }
 .line .stepper { margin-top: 0; padding: 4px 6px; }
 .line .stepper__btn { width: 25px; height: 25px; }
+/* A real button, not a whisper: red at rest with a border, because session
+   logs showed visitors never found the muted-grey text it used to be. The
+   ghost treatment keeps it quieter than the filled Checkout below it. */
 .line__rm {
+  position: relative;
+  display: inline-flex; align-items: center; gap: 6px;
+  min-height: 32px;
   font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
-  color: var(--muted);
-  padding: 6px 10px; border-radius: 999px;
+  color: #B3261E;
+  padding: 5px 12px;
+  border: 1px solid rgba(179, 38, 30, .35);
+  border-radius: 999px;
   margin-left: auto;
-  transition: color .2s, background .2s;
+  transition: color .2s, background .2s, border-color .2s;
 }
-.line__rm:hover { color: #B3261E; background: rgba(179, 38, 30, .08); }
-:root[data-theme="dark"] .line__rm:hover { color: #ff8f7a; background: rgba(255, 143, 122, .1); }
+/* 32px of visible button, 44px of touch: the overlay catches near-misses */
+.line__rm::before {
+  content: ''; position: absolute; left: 0; right: 0;
+  top: 50%; height: 44px; transform: translateY(-50%);
+}
+.line__rm:hover { color: #B3261E; background: rgba(179, 38, 30, .08); border-color: #B3261E; }
+:root[data-theme="dark"] .line__rm { color: #ff8f7a; border-color: rgba(255, 143, 122, .35); }
+:root[data-theme="dark"] .line__rm:hover { color: #ff8f7a; background: rgba(255, 143, 122, .1); border-color: #ff8f7a; }
 
 .drawer__foot {
   padding: 16px 22px 20px;
