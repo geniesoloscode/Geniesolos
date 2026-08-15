@@ -1026,6 +1026,13 @@ html { scrollbar-color: var(--violet-bright) var(--cream-2); }
 .totals__row dd { font-family: var(--mono); font-size: 21px; font-weight: 700; color: var(--ink); }
 .totals__row--once dd { color: var(--amber-deep); }
 
+/* The quiet no-charge reassurance under the totals: same voice as
+   .drawer__terms, left-aligned so it reads with the numbers above it. */
+.drawer__note {
+  margin: -4px 0 14px;
+  font-family: var(--mono); font-size: 11px; color: var(--muted); line-height: 1.6;
+}
+
 .drawer__go { width: 100%; }
 .drawer__go[disabled] { opacity: .55; cursor: not-allowed; }
 .drawer__go[disabled]:hover { transform: none; box-shadow: 0 14px 30px -12px rgba(23, 161, 94, .55); }

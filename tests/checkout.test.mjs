@@ -23,14 +23,8 @@ const rawEv = (body, extra = {}) => ({
 const ev = (body, extra = {}) => rawEv(JSON.stringify(body), extra);
 const cart = (...items) => ({ items });
 const paramsOf = (call) => new URLSearchParams(call.opts.body);
-const lineItems = (p) => {
-  const out = [];
-  for (const [k, v] of p.entries()) {
-    const m = /^line_items\[(\d+)\]\[(price|quantity)\]$/.exec(k);
-    if (m) (out[Number(m[1])] ||= {})[m[2]] = v;
-  }
-  return out;
-};
+const orderOf = (call) => paramsOf(call).get('metadata[order]');
+const orderJsonOf = (call) => JSON.parse(paramsOf(call).get('metadata[order_json]'));
 
 let lastCall;
 let logs;
@@ -65,33 +59,32 @@ test('happy path returns the session url and sends the right params', async () =
   assert.equal(JSON.parse(res.body).url, 'https://checkout.stripe.com/c/s_123');
 
   const p = paramsOf(lastCall);
-  assert.equal(p.get('mode'), 'subscription');
+  assert.equal(p.get('mode'), 'setup');
+  assert.equal(p.get('currency'), 'usd');
+  assert.equal(p.get('customer_creation'), 'always');
   assert.equal(p.get('consent_collection[terms_of_service]'), 'required');
   assert.equal(p.get('success_url'), 'https://geniesolos.com/store?checkout=success');
   assert.equal(p.get('cancel_url'), 'https://geniesolos.com/store?checkout=cancelled');
-  assert.equal(p.get('billing_address_collection'), 'auto');
-  assert.equal(p.get('allow_promotion_codes'), 'true');
   assert.equal(p.get('managed_payments[enabled]'), 'false');
-
-  const prices = [...p.entries()].filter(([k]) => /line_items\[\d+\]\[price\]/.test(k)).map(([, v]) => v);
-  assert.deepEqual(prices.sort(), ['price_sbm', 'price_sbo', 'price_sc'].sort());
+  assert.equal(p.get('metadata[order]'), 'storefront-build x1, server-care x3');
+  assert.deepEqual(orderJsonOf(lastCall), [
+    { key: 'storefront-build', qty: 1 },
+    { key: 'server-care', qty: 3 },
+  ]);
 });
 
-test('storefront-build sends its recurring price first and its one-time price second', async () => {
-  await handler(ev(cart({ key: 'storefront-build', qty: 1 })));
-  const lines = lineItems(paramsOf(lastCall));
-  assert.deepEqual(lines, [
-    { price: 'price_sbm', quantity: '1' },
-    { price: 'price_sbo', quantity: '1' },
-  ]);
+test('setup mode sends no line items and no price IDs at all', async () => {
+  await handler(ev(cart({ key: 'storefront-build', qty: 1 }, { key: 'server-care', qty: 3 })));
+  assert.doesNotMatch(lastCall.opts.body, /line_items/);
+  assert.doesNotMatch(lastCall.opts.body, /price_/);
 });
 
 test('the quantity on a care line is the one from the cart', async () => {
   await handler(ev(cart({ key: 'lifeline', qty: 1 }, { key: 'server-care', qty: 7 })));
-  const lines = lineItems(paramsOf(lastCall));
-  assert.deepEqual(lines, [
-    { price: 'price_l', quantity: '1' },
-    { price: 'price_sc', quantity: '7' },
+  assert.equal(orderOf(lastCall), 'lifeline x1, server-care x7');
+  assert.deepEqual(orderJsonOf(lastCall), [
+    { key: 'lifeline', qty: 1 },
+    { key: 'server-care', qty: 7 },
   ]);
 });
 
@@ -136,7 +129,7 @@ test('a base64 body is decoded before it is parsed', async () => {
   const body = Buffer.from(JSON.stringify(cart({ key: 'lifeline', qty: 1 })), 'utf8').toString('base64');
   const res = await handler(rawEv(body, { isBase64Encoded: true }));
   assert.equal(res.statusCode, 200);
-  assert.equal(paramsOf(lastCall).get('line_items[0][price]'), 'price_l');
+  assert.equal(orderOf(lastCall), 'lifeline x1');
 });
 
 test('an empty cart is refused', async () => {
@@ -171,8 +164,7 @@ test('workspace-admin without a storefront base is refused', async () => {
 test('workspace-admin with a storefront base goes through', async () => {
   const res = await handler(ev(cart({ key: 'storefront-zero', qty: 1 }, { key: 'workspace-admin', qty: 1 })));
   assert.equal(res.statusCode, 200);
-  const lines = lineItems(paramsOf(lastCall));
-  assert.deepEqual(lines.map((l) => l.price), ['price_sz', 'price_wa']);
+  assert.equal(orderOf(lastCall), 'storefront-zero x1, workspace-admin x1');
 });
 
 test('an addon without any plan is refused', async () => {
@@ -236,9 +228,9 @@ test('fields the client should not send are ignored, never priced', async () => 
   }));
   assert.equal(res.statusCode, 200);
   const p = paramsOf(lastCall);
-  assert.equal(p.get('mode'), 'subscription');
+  assert.equal(p.get('mode'), 'setup');
   assert.equal(p.get('success_url'), 'https://geniesolos.com/store?checkout=success');
-  assert.deepEqual(lineItems(p), [{ price: 'price_l', quantity: '1' }]);
+  assert.deepEqual(orderJsonOf(lastCall), [{ key: 'lifeline', qty: 1 }]);
   assert.doesNotMatch(lastCall.opts.body, /price_data|unit_amount|price_free|coupon|btc|evil/);
 });
 

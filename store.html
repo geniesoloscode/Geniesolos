@@ -51,7 +51,7 @@
 <!-- The page's styles live in css/store.css, NOT inline: CloudFront attaches
      a Content-Security-Policy with style-src 'self', which blocks inline
      <style> blocks entirely. Same ?v= cache-busting rule as the homepage. -->
-<link rel="stylesheet" href="css/store.css?v=20260816">
+<link rel="stylesheet" href="css/store.css?v=20260817">
 </head>
 <body>
 
@@ -168,11 +168,12 @@
         <h3 class="card__name">Lifeline</h3>
         <p class="card__price"><b>$299</b><span>/month</span></p>
         <p class="card__meta">10 users included, then $20/user/month</p>
+        <p class="card__prev">Your on-call tech support.</p>
         <ul class="feats">
+          <li>Unlimited support, troubleshooting, and tech consulting</li>
+          <li>Vendor coordination handled for you</li>
+          <li>Microsoft 365 or Google Workspace user administration: accounts, onboarding and offboarding, password resets, shared drives and permissions</li>
           <li>Same-business-day initial response</li>
-          <li>Unlimited reasonable support requests, delivered remotely</li>
-          <li>Microsoft 365 or Google Workspace administration</li>
-          <li>Routine maintenance and patching in scheduled windows</li>
         </ul>
         <div class="card__foot">
           <button class="btn btn--solid add" type="button" data-key="lifeline">
@@ -190,9 +191,12 @@
         <p class="card__meta">15 users included, then $25/user/month</p>
         <p class="card__prev">Everything in Lifeline, plus:</p>
         <ul class="feats">
-          <li>4-business-hour initial response</li>
-          <li>The same unlimited support scope, answered sooner</li>
-          <li>Workspace administration for every included seat</li>
+          <li>Your website managed and secured: managed hosting, SSL, daily backups, uptime monitoring</li>
+          <li>Full tenant administration of Microsoft 365 or Google Workspace</li>
+          <li>SharePoint and Teams structuring</li>
+          <li>MFA setup and enforcement</li>
+          <li>Secure Score improvement</li>
+          <li>Priority 4-hour response during business hours</li>
         </ul>
         <div class="card__foot">
           <button class="btn btn--solid add" type="button" data-key="presence">
@@ -211,9 +215,11 @@
         <p class="card__meta">20 users included, then $25/user/month</p>
         <p class="card__prev">Everything in Presence, plus:</p>
         <ul class="feats">
-          <li>1-hour response for emergencies, 24/7</li>
-          <li>A website build included in the plan</li>
-          <li>Website ownership transfers after month 12</li>
+          <li>A brand-new custom website, built for you and delivered within 60 days</li>
+          <li>Continuously maintained, secured, and improved after launch</li>
+          <li>1-hour emergency response, 24/7</li>
+          <li>Website ownership transfers after month&nbsp;12</li>
+          <li>12-month minimum, then month-to-month</li>
         </ul>
         <div class="card__foot">
           <button class="btn btn--solid add" type="button" data-key="transformation">
@@ -266,7 +272,7 @@
       </article>
 
       <article class="card" data-reveal>
-        <span class="card__badge card__badge--sun">Due today $4,500</span>
+        <span class="card__badge card__badge--sun">One&#8209;time $4,500</span>
         <p class="card__kicker">Build + care</p>
         <h3 class="card__name">Storefront</h3>
         <p class="card__price"><b>$4,500</b><span>once, then $149/month</span></p>
@@ -485,14 +491,16 @@
 
       <dl class="totals">
         <div class="totals__row">
-          <dt>Monthly</dt>
+          <dt>Monthly, after approval</dt>
           <dd id="totalMonthly">$0</dd>
         </div>
         <div class="totals__row totals__row--once" id="onceRow" hidden>
-          <dt>Due today</dt>
+          <dt>One-time, after approval</dt>
           <dd id="totalOnce">$0</dd>
         </div>
       </dl>
+
+      <p class="drawer__note">Nothing is charged at checkout. I confirm your needs first, then billing begins.</p>
 
       <button class="btn btn--solid drawer__go" id="checkoutBtn" type="button">
         <span class="drawer__go-label">Checkout</span>
@@ -505,7 +513,7 @@
 </div>
 
 <script src="js/store-cart.js?v=20260815"></script>
-<script src="js/store.js?v=20260816"></script>
+<script src="js/store.js?v=20260817"></script>
 
 </body>
 </html>

@@ -1,16 +1,20 @@
 /* Checkout session Lambda for geniesolos.com.
  *
  * One file, no dependencies, Node 22 ESM. It takes a cart from the store
- * drawer, revalidates it under the same rules the browser enforces, turns it
- * into Stripe Checkout Session parameters and hands the session URL back.
+ * drawer, revalidates it under the same rules the browser enforces and opens
+ * a Stripe Checkout Session in setup mode: Stripe saves the customer's card
+ * and charges nothing. The order rides along in the session metadata, and
+ * the owner starts billing by hand from the dashboard after reviewing it
+ * (see "Approving an order" in api/README.md).
  *
- * The client never sends prices. Every amount lives in Stripe and is reached
- * only through PRICE_MAP, so the worst a tampered request can do is fail
- * validation.
+ * The client never sends prices. PRICE_MAP still names every sellable key
+ * and a cart it cannot serve still fails loudly, but nothing from it is sent
+ * to Stripe: no amount is involved here at all.
  *
  * Env:
  *   STRIPE_SECRET_KEY  sk_test_... or sk_live_...
- *   PRICE_MAP          JSON {key: [priceId, ...]}, recurring id first
+ *   PRICE_MAP          JSON {key: [priceId, ...]}, recurring id first;
+ *                      validated here, billed with in the dashboard
  *   ALLOWED_ORIGIN     https://geniesolos.com
  */
 
@@ -120,34 +124,34 @@ function priceIdsFor(priceMap, key) {
   return ids;
 }
 
-/* One line item per price ID, in map order, so storefront-build's monthly
-   price lands before its one-time build fee. Throws when the map cannot serve
-   a key, which is a deploy mistake rather than a customer mistake. */
+/* Setup mode takes no line items: Stripe saves the card and charges nothing.
+   The cart still has to resolve through PRICE_MAP so catalog drift fails
+   loudly here, as a deploy mistake, instead of surfacing when the owner
+   tries to bill. The order itself travels in metadata; values cap at 500
+   characters and ten short lines fit with room to spare. */
 function buildParams(items, priceMap) {
-  const params = new URLSearchParams();
-  let line = 0;
-
   for (const item of items) {
-    const ids = priceIdsFor(priceMap, item.key);
-    if (!ids) throw new Error(`PRICE_MAP has no usable price IDs for ${item.key}`);
-    for (const id of ids) {
-      params.set(`line_items[${line}][price]`, id);
-      params.set(`line_items[${line}][quantity]`, String(item.qty));
-      line++;
+    if (!priceIdsFor(priceMap, item.key)) {
+      throw new Error(`PRICE_MAP has no usable price IDs for ${item.key}`);
     }
   }
 
-  params.set('mode', 'subscription');
+  const params = new URLSearchParams();
+  params.set('mode', 'setup');
+  // Required by the API in setup mode, even though nothing is charged.
+  params.set('currency', 'usd');
+  // Every session leaves one Customer carrying the saved card, so the
+  // dashboard has a single record per order to bill or delete.
+  params.set('customer_creation', 'always');
   params.set('success_url', SUCCESS_URL);
   params.set('cancel_url', CANCEL_URL);
   params.set('consent_collection[terms_of_service]', 'required');
-  params.set('billing_address_collection', 'auto');
-  params.set('allow_promotion_codes', 'true');
-  // The Stripe account has Managed Payments on by default, which rejects
-  // any product without a tax_code. This store bills the client directly
-  // per the terms (no tax automation), so opt the session out. Remove this
-  // line only after every product in setup-stripe.ps1 carries a tax_code.
+  // The Stripe account has Managed Payments on by default, and Managed
+  // Payments rejects mode=setup outright ("Invalid mode: setup"), so every
+  // session opts out. Verified against the real test-mode API.
   params.set('managed_payments[enabled]', 'false');
+  params.set('metadata[order]', items.map((i) => `${i.key} x${i.qty}`).join(', '));
+  params.set('metadata[order_json]', JSON.stringify(items));
   return params;
 }
 

@@ -276,7 +276,7 @@
 
     var bits = [];
     if (p.maxQty > 1) bits.push(money(p.monthly) + '/month each');
-    if (p.once) bits.push(money(p.once * item.qty) + ' due today');
+    if (p.once) bits.push(money(p.once * item.qty) + ' one-time');
     if (bits.length) {
       var meta = document.createElement('p');
       meta.className = 'line__meta';
@@ -334,8 +334,8 @@
 
     live.textContent = count === 0
       ? 'Cart is empty.'
-      : 'Cart: ' + count + (count === 1 ? ' item, ' : ' items, ') + money(t.monthly) + ' per month' +
-        (t.once ? ', ' + money(t.once) + ' due today' : '') + '.';
+      : 'Cart: ' + count + (count === 1 ? ' item, ' : ' items, ') + money(t.monthly) + ' monthly after approval' +
+        (t.once ? ', ' + money(t.once) + ' one-time after approval' : '') + '.';
 
     /* `busy` guards the button too: a storage event from another tab can
        re-render mid-checkout and must not resurrect a live Checkout. */
@@ -780,11 +780,11 @@
     if (kind === 'success') {
       panelEl.classList.remove('state--cancel');
       $('#stateMark').textContent = 'Order received';
-      $('#stateTitle').textContent = 'You are in. Welcome aboard.';
+      $('#stateTitle').textContent = 'Card saved. Nothing charged.';
       $('#stateText').textContent =
-        'Stripe has your subscription and the receipt is on its way to your inbox. ' +
-        'I will email you within one business day to schedule onboarding and collect the access I need. ' +
-        'You can cancel or update your card any time from the billing portal link in that receipt.';
+        'Your card is saved with Stripe and nothing has been charged. ' +
+        'I review every order personally and will reach out within one business day ' +
+        'to confirm your needs before billing begins.';
     } else {
       panelEl.classList.add('state--cancel');
       $('#stateMark').textContent = 'Checkout cancelled';
