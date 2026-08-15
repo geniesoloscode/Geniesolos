@@ -47,7 +47,8 @@
 param(
     [ValidateSet('test', 'live')]
     [string]$Mode = 'test',
-    [switch]$DryRun
+    [switch]$DryRun,
+    [switch]$Force
 )
 
 $ErrorActionPreference = 'Stop'
@@ -374,11 +375,45 @@ try {
     }
     $hasBehavior = $false
     if ($distCfg.CacheBehaviors.Quantity -gt 0) {
-        $hasBehavior = [bool]($distCfg.CacheBehaviors.Items | Where-Object { $_.PathPattern -eq '/api/*' })
+        # Both spellings checked: CloudFront documents the leading slash as
+        # optional, but in practice '/api/*' never matched at the edge while
+        # 'api/*' does (observed 2026-08-15). New behaviors are created
+        # slash-less; an existing slashed one is repaired in place.
+        $slashed     = $distCfg.CacheBehaviors.Items | Where-Object { $_.PathPattern -eq '/api/*' }
+        $hasBehavior = [bool]($distCfg.CacheBehaviors.Items | Where-Object { $_.PathPattern -in @('api/*', '/api/*') })
     }
 
-    if ($hasOrigin -and $hasBehavior) {
-        Ok 'checkout-lambda origin and /api/* behavior already present, nothing to change'
+    if ($hasOrigin -and $hasBehavior -and $slashed) {
+        # Repair path: the behavior exists but with the leading-slash pattern
+        # that the edge never matches. Rewrite the pattern in place and push.
+        Warn "behavior exists as '/api/*', repairing to 'api/*'"
+        $slashed[0].PathPattern = 'api/*'
+        $AfterText = $distCfg | ConvertTo-Json -Depth 20
+        Write-Host '    --- distribution config diff ---' -ForegroundColor White
+        $rdiff = Compare-Object -ReferenceObject ($BeforeText -split "`r?`n") -DifferenceObject ($AfterText -split "`r?`n")
+        foreach ($line in $rdiff) {
+            $mark = if ($line.SideIndicator -eq '=>') { '+' } else { '-' }
+            Write-Host "    $mark $($line.InputObject.Trim())"
+        }
+        if ($DryRun) {
+            Ok 'WOULD update-distribution with the repaired path pattern (skipped: -DryRun)'
+        } else {
+            $answer = if ($Force) { 'y' } else { Read-Host 'Apply this CloudFront change? (y/N)' }
+            if ($answer -notmatch '^(y|yes)$') {
+                Warn 'Skipped. Re-run to apply later.'
+            } else {
+                $cfgFile = Join-Path ([IO.Path]::GetTempPath()) "gs-dist-repair-$PID.json"
+                $AfterText | Set-Content $cfgFile -Encoding utf8
+                aws cloudfront update-distribution --id $DistributionId --region $Region --if-match $ETag --distribution-config "file://$cfgFile" --output json | Out-Null
+                if ($LASTEXITCODE -ne 0) { throw 'update-distribution (path repair) failed' }
+                Remove-Item $cfgFile -ErrorAction SilentlyContinue
+                Ok 'path pattern repaired, waiting for Deployed status...'
+                aws cloudfront wait distribution-deployed --id $DistributionId --region $Region
+                Ok 'distribution deployed'
+            }
+        }
+    } elseif ($hasOrigin -and $hasBehavior) {
+        Ok 'checkout-lambda origin and api/* behavior already present, nothing to change'
     } else {
         # Placeholders only ever surface under -DryRun, when the function URL
         # and/or OAC do not exist yet to read a real value from - they make
@@ -416,7 +451,7 @@ try {
         if (-not $hasBehavior) {
             $newBehavior = @"
 {
-  "PathPattern": "/api/*",
+  "PathPattern": "api/*",
   "TargetOriginId": "checkout-lambda",
   "TrustedSigners": { "Enabled": false, "Quantity": 0 },
   "TrustedKeyGroups": { "Enabled": false, "Quantity": 0 },
@@ -458,7 +493,9 @@ try {
         } elseif (-not $FunctionUrl -or -not $OacId) {
             throw 'Cannot patch the distribution: function URL or OAC id is missing (an earlier step did not complete).'
         } else {
-            $answer = Read-Host 'Apply this CloudFront change? (y/N)'
+            # -Force mirrors deploy.ps1: the confirm prompt cannot run in a
+            # non-interactive shell, and the diff above has been reviewed.
+            $answer = if ($Force) { 'y' } else { Read-Host 'Apply this CloudFront change? (y/N)' }
             if ($answer -notmatch '^(y|yes)$') {
                 Warn 'Skipped. Re-run to apply later.'
             } else {
