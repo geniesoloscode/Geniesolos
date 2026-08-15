@@ -69,7 +69,7 @@ jobs:
       # stylesheet with a stale document.
       - name: Upload HTML
         run: |
-          for f in index.html 404.html terms.html; do
+          for f in index.html 404.html terms.html store.html; do
             aws s3 cp "$f" "s3://$BUCKET/$f" \
               --cache-control "public, max-age=0, must-revalidate" \
               --content-type "text/html; charset=utf-8"
@@ -78,6 +78,10 @@ jobs:
           # URL, so /terms only works if an object named "terms" exists.
           # Keep identical to the extensionless upload in scripts/deploy.ps1.
           aws s3 cp terms.html "s3://$BUCKET/terms" \
+            --cache-control "public, max-age=0, must-revalidate" \
+            --content-type "text/html; charset=utf-8"
+          # Clean-URL copy for the store, same reasoning as terms above.
+          aws s3 cp store.html "s3://$BUCKET/store" \
             --cache-control "public, max-age=0, must-revalidate" \
             --content-type "text/html; charset=utf-8"
 
