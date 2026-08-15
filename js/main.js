@@ -450,7 +450,8 @@
     const links  = $('#navLinks');
     const toggle = $('#navToggle');
     const items  = $$('[data-nav]');
-    const secs   = items.map(a => $(a.getAttribute('href'))).filter(Boolean);
+    const spy    = items.filter(a => (a.getAttribute('href') || '')[0] === '#');
+    const secs   = spy.map(a => $(a.getAttribute('href'))).filter(Boolean);
 
     toggle && toggle.addEventListener('click', () => {
       const open = links.classList.toggle('open');
@@ -477,7 +478,7 @@
       const probe = y + window.innerHeight * 0.32;
       let current = -1;
       secs.forEach((s, idx) => { if (s.offsetTop <= probe) current = idx; });
-      items.forEach((a, idx) => a.classList.toggle('active', idx === current));
+      spy.forEach((a, idx) => a.classList.toggle('active', idx === current));
     }
 
     let ticking = false;
