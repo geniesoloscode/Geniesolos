@@ -150,8 +150,13 @@ function buildParams(items, priceMap) {
   // Payments rejects mode=setup outright ("Invalid mode: setup"), so every
   // session opts out. Verified against the real test-mode API.
   params.set('managed_payments[enabled]', 'false');
-  params.set('metadata[order]', items.map((i) => `${i.key} x${i.qty}`).join(', '));
+  const summary = items.map((i) => `${i.key} x${i.qty}`).join(', ');
+  params.set('metadata[order]', summary);
   params.set('metadata[order_json]', JSON.stringify(items));
+  // The same summary again on the SetupIntent itself, so the order text shows
+  // directly on the SetupIntent and customer view in the dashboard instead of
+  // only inside the session's metadata.
+  params.set('setup_intent_data[metadata][order]', summary);
   return params;
 }
 

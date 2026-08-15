@@ -1,7 +1,8 @@
 # api/: the checkout Lambda
 
-`checkout/index.mjs` is the only server-side code on geniesolos.com. Everything else is
-static files on S3 behind CloudFront. The function takes a cart from the store drawer,
+`checkout/index.mjs` and `webhook/index.mjs` (see "Order notifications" below) are the
+only server-side code on geniesolos.com. Everything else is static files on S3 behind
+CloudFront. The function takes a cart from the store drawer,
 revalidates it, creates a Stripe Checkout Session **in setup mode** and returns the URL
 the browser navigates to. Setup mode saves the customer's card and charges **nothing**;
 the owner reviews each order and starts billing by hand from the dashboard. See
@@ -101,11 +102,61 @@ parameter below was verified against the real test-mode API on 2026-08-15.
 | `managed_payments[enabled]` | `false` | Managed Payments rejects `mode=setup` outright ("Invalid mode: setup"). |
 | `metadata[order]` | e.g. `lifeline x1, server-care x3` | Human summary of the order. |
 | `metadata[order_json]` | compact JSON of `{key, qty}` lines | Exact order. Metadata values cap at 500 chars; a 10 line cart fits. |
+| `setup_intent_data[metadata][order]` | same string as `metadata[order]` | Puts the order text on the SetupIntent itself, so the dashboard customer view shows it without opening the session. Verified against the real test-mode API on 2026-08-15. |
 
 The Stripe call is form encoded, over `fetch`, with a 10 second `AbortSignal.timeout`.
 
 Logs carry the session ID and Stripe's error message. They never carry the secret key or
 customer details.
+
+## Order notifications
+
+`webhook/index.mjs` is a second, separate Lambda whose only job is to email the owner
+the moment an order completes:
+
+```
+Stripe -> webhook Lambda (public function URL) -> signature check -> SNS topic -> email
+```
+
+Stripe POSTs the `checkout.session.completed` event straight to the function URL. The
+handler verifies the `Stripe-Signature` header (HMAC-SHA256 of `<t>.<raw body>` with the
+endpoint's `whsec_` secret, every `v1` entry compared timing-safe, timestamps more than
+300 seconds off rejected), then publishes a plain-text order summary to an SNS topic.
+The topic's confirmed email subscription is what lands in the inbox: the order lines,
+the customer's name and email, the session and customer IDs, and a deep link to the
+customer in the dashboard. Prices are never in the email; they live in Stripe. Any
+other verified event type is answered `200 {"received":true}` and dropped. An SNS
+failure returns 500 on purpose, because Stripe retries failed deliveries.
+
+**Why this bypasses CloudFront.** Every POST through the CloudFront OAC path must carry
+`x-amz-content-sha256` (see above), and Stripe's webhook sender cannot be told to add
+that header. So this Lambda has its own PUBLIC function URL outside CloudFront, and its
+front door is the webhook signature instead: a request not signed with this endpoint's
+secret is a terse 400 that touches nothing.
+
+### Environment
+
+| Variable | Value | Notes |
+|---|---|---|
+| `STRIPE_WEBHOOK_SECRET` | `whsec_...` | Signing secret of the webhook endpoint (dashboard, Developers -> Webhooks). Never logged. |
+| `ORDERS_TOPIC_ARN` | `arn:aws:sns:...` | SNS topic with a confirmed email subscription to the owner's inbox. |
+
+Test and live mode are TWO webhook endpoints in Stripe with TWO different signing
+secrets. The `whsec_` in this Lambda's env must match the mode of the events sent to
+it; a live event arriving at a function holding the test secret is a 400, not an email.
+
+### If the emails stop
+
+1. **Is the SNS subscription still confirmed?** SNS console -> the topic ->
+   Subscriptions. A deleted or unconfirmed email subscription publishes into the void
+   with no error anywhere.
+2. **Does the signing secret still match?** Rolling the secret in the Stripe dashboard
+   silently turns every delivery into a 400 until `STRIPE_WEBHOOK_SECRET` is updated
+   to the new value.
+3. **What does Stripe see?** Dashboard -> Developers -> Webhooks -> the endpoint lists
+   every delivery attempt with status codes and pending retries. A wall of 400s is the
+   secret; 500s are SNS (CloudWatch logs will show `sns publish failed`); no attempts
+   at all means the endpoint URL or its subscribed event types are wrong.
 
 ## Approving an order
 

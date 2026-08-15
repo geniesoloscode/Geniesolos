@@ -67,6 +67,7 @@ test('happy path returns the session url and sends the right params', async () =
   assert.equal(p.get('cancel_url'), 'https://geniesolos.com/store?checkout=cancelled');
   assert.equal(p.get('managed_payments[enabled]'), 'false');
   assert.equal(p.get('metadata[order]'), 'storefront-build x1, server-care x3');
+  assert.equal(p.get('setup_intent_data[metadata][order]'), p.get('metadata[order]'));
   assert.deepEqual(orderJsonOf(lastCall), [
     { key: 'storefront-build', qty: 1 },
     { key: 'server-care', qty: 3 },
