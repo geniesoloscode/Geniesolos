@@ -314,20 +314,33 @@ try {
         Ok "function URL created: $FunctionUrl"
     }
 
+    # TWO statements, both required. Function URLs created after Oct 2025
+    # authorize lambda:InvokeFunctionUrl at the front door AND
+    # lambda:InvokeFunction at invocation; granting only the first yields
+    # AccessDeniedException on every CloudFront request (observed, and cost
+    # a long debugging session on 2026-08-15). No --function-url-auth-type
+    # on either: the extra condition is unnecessary against the canonical
+    # policy and was in the blast radius during that debugging.
     $SourceArn = "arn:aws:cloudfront::${Account}:distribution/$DistributionId"
-    if ($DryRun) {
-        Would "add-permission cloudfront-invoke (lambda:InvokeFunctionUrl, principal cloudfront.amazonaws.com, source-arn $SourceArn)"
-    } else {
-        $permRaw  = aws lambda add-permission --function-name $FnName --statement-id cloudfront-invoke `
-            --action lambda:InvokeFunctionUrl --principal cloudfront.amazonaws.com `
-            --source-arn $SourceArn --function-url-auth-type AWS_IAM `
+    $PermStatements = @(
+        @{ Sid = 'cloudfront-invoke';    Action = 'lambda:InvokeFunctionUrl' },
+        @{ Sid = 'cloudfront-invoke-fn'; Action = 'lambda:InvokeFunction' }
+    )
+    foreach ($stmt in $PermStatements) {
+        if ($DryRun) {
+            Would "add-permission $($stmt.Sid) ($($stmt.Action), principal cloudfront.amazonaws.com, source-arn $SourceArn)"
+            continue
+        }
+        $permRaw  = aws lambda add-permission --function-name $FnName --statement-id $stmt.Sid `
+            --action $stmt.Action --principal cloudfront.amazonaws.com `
+            --source-arn $SourceArn `
             --region $Region --output json 2>&1
         $permExit = $LASTEXITCODE
         $perm     = $permRaw -join "`n"
         if ($permExit -eq 0) {
-            Ok 'permission cloudfront-invoke added'
+            Ok "permission $($stmt.Sid) added"
         } elseif ($perm -match 'ResourceConflictException') {
-            Ok 'permission cloudfront-invoke already present'
+            Ok "permission $($stmt.Sid) already present"
         } else {
             throw "add-permission failed: $perm"
         }

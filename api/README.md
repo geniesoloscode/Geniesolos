@@ -136,3 +136,21 @@ node --test "tests/*.test.mjs"
 
 `tests/checkout.test.mjs` stubs `globalThis.fetch`, so it exercises the real handler and
 asserts on the exact parameters sent to Stripe. Nothing reaches the network.
+
+---
+
+## Two lessons the first deployment paid for (2026-08-15)
+
+**1. New function URLs need TWO permissions.** Function URLs created after
+October 2025 authorize `lambda:InvokeFunctionUrl` at the front door AND
+`lambda:InvokeFunction` at invocation. Granting only the first produces
+`403 AccessDeniedException` on every CloudFront request while direct
+same-account signed calls still work (identity permissions cover them),
+which points the investigation everywhere except the real cause.
+setup-aws.ps1 grants both.
+
+**2. Stripe Managed Payments is on by default for this account** and
+rejects sessions whose products lack a `tax_code`. The Lambda passes
+`managed_payments[enabled]=false` per the terms' direct-billing model.
+To use Managed Payments instead: add eligible tax codes to all eight
+products, then remove that parameter from index.mjs (and its test).

@@ -143,6 +143,11 @@ function buildParams(items, priceMap) {
   params.set('consent_collection[terms_of_service]', 'required');
   params.set('billing_address_collection', 'auto');
   params.set('allow_promotion_codes', 'true');
+  // The Stripe account has Managed Payments on by default, which rejects
+  // any product without a tax_code. This store bills the client directly
+  // per the terms (no tax automation), so opt the session out. Remove this
+  // line only after every product in setup-stripe.ps1 carries a tax_code.
+  params.set('managed_payments[enabled]', 'false');
   return params;
 }
 

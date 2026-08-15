@@ -71,6 +71,7 @@ test('happy path returns the session url and sends the right params', async () =
   assert.equal(p.get('cancel_url'), 'https://geniesolos.com/store?checkout=cancelled');
   assert.equal(p.get('billing_address_collection'), 'auto');
   assert.equal(p.get('allow_promotion_codes'), 'true');
+  assert.equal(p.get('managed_payments[enabled]'), 'false');
 
   const prices = [...p.entries()].filter(([k]) => /line_items\[\d+\]\[price\]/.test(k)).map(([, v]) => v);
   assert.deepEqual(prices.sort(), ['price_sbm', 'price_sbo', 'price_sc'].sort());
