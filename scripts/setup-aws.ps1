@@ -656,6 +656,25 @@ try {
         Ok "topic created: $OrdersTopicArn"
     }
 
+    # Encryption at rest with the AWS-managed SNS key: no monthly key fee,
+    # request charges stay inside the KMS free tier at this volume, and the
+    # order messages (customer name and email) stop sitting in SNS as
+    # plaintext. Idempotent: setting the same value twice is a no-op.
+    if ($topicExists) {
+        $kmsNow = ($topicJson | ConvertFrom-Json -ErrorAction SilentlyContinue).Attributes.KmsMasterKeyId
+        if ($kmsNow -eq 'alias/aws/sns') {
+            Ok 'topic encryption at rest already on (alias/aws/sns)'
+        } elseif ($DryRun) {
+            Would 'sns set-topic-attributes KmsMasterKeyId=alias/aws/sns'
+        } else {
+            aws sns set-topic-attributes --topic-arn $OrdersTopicArn --attribute-name KmsMasterKeyId --attribute-value alias/aws/sns --region $Region 2>&1 | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw 'sns set-topic-attributes (KMS) failed' }
+            Ok 'topic encryption at rest enabled (alias/aws/sns)'
+        }
+    } elseif ($DryRun) {
+        Would 'sns set-topic-attributes KmsMasterKeyId=alias/aws/sns (after create)'
+    }
+
     $existingSub = $null
     if ($topicExists) {
         $subsRaw = aws sns list-subscriptions-by-topic --topic-arn $OrdersTopicArn --region $Region --output json 2>&1
