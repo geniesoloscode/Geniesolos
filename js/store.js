@@ -165,6 +165,28 @@
     return list.slice(0, -1).join(', ') + ' and ' + list[list.length - 1];
   }
 
+  /* ── cart lookups ────────────────────────────────────────── */
+  function lineFor(key) {
+    for (var i = 0; i < items.length; i++) if (items[i].key === key) return items[i];
+    return null;
+  }
+
+  /* The rules clamp on the way in; the page clamps on the way out so a
+     display can never show a number the cart would refuse. */
+  function clampQty(key, qty) {
+    var p = Cart.CATALOG[key];
+    var max = p ? p.maxQty : 1;
+    var n = Math.floor(Number(qty));
+    if (!isFinite(n)) n = 1;
+    return Math.min(max, Math.max(1, n));
+  }
+
+  /* Never say "Server Care" when the visitor is buying three of them. */
+  function withQty(key, qty) {
+    var p = Cart.CATALOG[key];
+    return p.maxQty > 1 ? p.name + ' ×' + qty : p.name;
+  }
+
   /* ── toasts ──────────────────────────────────────────────── */
   function toast(msg, kind) {
     if (!toastsEl) return;
@@ -327,7 +349,8 @@
       if (!p) return;
 
       var card = btn.closest('.card');
-      var inCart = items.some(function (it) { return it.key === key; });
+      var line = lineFor(key);
+      var inCart = !!line;
       if (card) card.classList.toggle('is-in', inCart);
 
       var locked = (p.kind === 'addon' && !hasBase) ||
@@ -335,53 +358,84 @@
       btn.disabled = locked;
       if (card) card.classList.toggle('is-locked', locked);
 
+      /* The card's stepper is the cart line whenever there is one, so the
+         number on the card is the number on the invoice. With nothing in the
+         cart it goes back to being a chooser for the next add. */
+      var stepper = card ? $('.stepper[data-stepper]', card) : null;
+      var shown = 1;
+      if (stepper) {
+        var out = $('[data-qty]', stepper);
+        if (out) {
+          shown = clampQty(key, inCart ? line.qty : out.textContent);
+          out.textContent = String(shown);
+        }
+        $$('.stepper__btn', stepper).forEach(function (b) {
+          var step = Number(b.getAttribute('data-step'));
+          b.disabled = locked || (step < 0 ? shown <= 1 : shown >= p.maxQty);
+        });
+      }
+
       var hint = card ? $('.card__hint', card) : null;
       if (hint) {
         hint.classList.toggle('is-lit', locked);
+        var inCartText = p.maxQty > 1 ? '×' + shown + ' in your cart' : 'In your cart';
         hint.textContent = locked ? hint.getAttribute('data-locked')
-                                  : (inCart ? 'In your cart' : 'Ready to add');
-      }
-
-      var stepper = card ? $('.stepper[data-stepper]', card) : null;
-      if (stepper) {
-        $$('.stepper__btn', stepper).forEach(function (b) { b.disabled = locked; });
+                                  : (inCart ? inCartText : 'Ready to add');
       }
     });
   }
 
   /* ── mutations ───────────────────────────────────────────── */
+  /* The card stepper is an absolute quantity, not an increment, so a second
+     Add on a line the cart already holds SETS that number. Routing it through
+     Cart.add would add the picked quantity to the quantity already there and
+     charge for a number nobody chose. */
   function addKey(key, qty, btn) {
+    if (!Object.prototype.hasOwnProperty.call(Cart.CATALOG, key)) return;
+
     var before = JSON.stringify(items);
-    var result;
-    try {
-      result = Cart.add(items, key, qty);
-    } catch (e) {
-      toast(e.message, 'warn');
-      return;
-    }
+    var wanted = clampQty(key, qty);
+    var held = lineFor(key);
 
-    items = result.items;
-    save();
-
-    if (result.replaced) {
-      toast('Swapped ' + result.replaced + ' for ' + Cart.CATALOG[key].name + '. One plan at a time.', 'warn');
-    }
-    if (result.dropped && result.dropped.length) {
-      toast('Removed ' + names(result.dropped) + ': it needs a Storefront plan.', 'warn');
-    }
-    if (!result.replaced && (!result.dropped || !result.dropped.length)) {
-      /* Re-adding a single-quantity line is a no-op in the rules, and saying
-         "Added" when nothing moved is how a store loses trust. */
+    if (held) {
+      items = Cart.setQty(items, key, wanted);
+      save();
       toast(JSON.stringify(items) === before
-        ? Cart.CATALOG[key].name + ' is already in your cart.'
-        : 'Added ' + Cart.CATALOG[key].name + ' to your cart.');
+        ? withQty(key, wanted) + (Cart.CATALOG[key].maxQty > 1 ? ' is already your cart quantity.'
+                                                              : ' is already in your cart.')
+        : withQty(key, wanted) + ' in your cart.');
+    } else {
+      var result;
+      try {
+        result = Cart.add(items, key, wanted);
+      } catch (e) {
+        toast(e.message, 'warn');
+        return;
+      }
+
+      items = result.items;
+      save();
+
+      if (result.replaced) {
+        toast('Swapped ' + result.replaced + ' for ' + Cart.CATALOG[key].name + '. One plan at a time.', 'warn');
+      }
+      if (result.dropped && result.dropped.length) {
+        toast('Removed ' + names(result.dropped) + ': it needs a Storefront plan.', 'warn');
+      }
+      if (!result.replaced && (!result.dropped || !result.dropped.length)) {
+        /* Read the quantity back off the cart rather than off the click: the
+           rules clamp, and a toast that overstates it is the same lie. */
+        var landed = lineFor(key);
+        toast('Added ' + withQty(key, landed ? landed.qty : wanted) + ' to your cart.');
+      }
     }
 
     if (btn) {
       var label = $('.add__label', btn);
       if (label) {
         btn.classList.add('is-added');
-        label.textContent = 'Added';
+        label.textContent = !held ? 'Added'
+                          : (JSON.stringify(items) === before ? 'In cart' : 'Updated');
         setTimeout(function () {
           btn.classList.remove('is-added');
           label.textContent = 'Add to cart';
@@ -523,15 +577,30 @@
   /* ── card wiring ─────────────────────────────────────────── */
   $$('.card__hint').forEach(function (h) { h.setAttribute('data-locked', h.textContent.trim()); });
 
+  /* Once a line is in the cart its card stepper edits the cart directly, the
+     same as the stepper in the drawer. Before that it is a chooser for the
+     quantity the next Add will use. Either way the card and the cart show one
+     number, because syncCards writes the cart's quantity back here. */
   $$('.stepper[data-stepper]').forEach(function (st) {
     var key = st.getAttribute('data-stepper');
-    var max = Cart.CATALOG[key] ? Cart.CATALOG[key].maxQty : 1;
     var out = $('[data-qty]', st);
+    if (!Cart.CATALOG[key] || !out) return;
 
     $$('.stepper__btn', st).forEach(function (btn) {
       btn.addEventListener('click', function () {
-        var next = Number(out.textContent) + Number(btn.getAttribute('data-step'));
-        out.textContent = String(Math.min(max, Math.max(1, next)));
+        var next = clampQty(key, Number(out.textContent) + Number(btn.getAttribute('data-step')));
+        if (lineFor(key)) {
+          setQty(key, next);           /* render() puts the number back on the card */
+        } else {
+          out.textContent = String(next);
+          syncCards();
+        }
+        /* Hitting a bound disables the button under the pointer; keyboard
+           focus must not fall off the page with it. */
+        if (btn.disabled) {
+          var other = $$('.stepper__btn', st).filter(function (b) { return b !== btn && !b.disabled; })[0];
+          if (other) other.focus();
+        }
       });
     });
   });
