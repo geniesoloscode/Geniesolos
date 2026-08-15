@@ -1,0 +1,27 @@
+{
+  "lifeline": [
+    "price_1U4dlJEEEbkqqitbNUifiLoQ"
+  ],
+  "presence": [
+    "price_1U4dlJEEEbkqqitbZiQiFK9V"
+  ],
+  "transformation": [
+    "price_1U4dlKEEEbkqqitbX6CPC2FO"
+  ],
+  "storefront-zero": [
+    "price_1U4dlKEEEbkqqitbucqytauV"
+  ],
+  "storefront-build": [
+    "price_1U4dlLEEEbkqqitb65jTmRkC",
+    "price_1U4dlMEEEbkqqitbtAVJ6Y7D"
+  ],
+  "server-care": [
+    "price_1U4dlMEEEbkqqitbxXHB0z4b"
+  ],
+  "db-care": [
+    "price_1U4dlNEEEbkqqitbeZiPjYzb"
+  ],
+  "workspace-admin": [
+    "price_1U4dlNEEEbkqqitbpsUvRyVg"
+  ]
+}
