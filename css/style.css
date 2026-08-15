@@ -463,6 +463,24 @@ main { position: relative; z-index: 4; }
   box-shadow: 0 12px 28px -14px rgba(124, 58, 237, .4);
 }
 
+.btn--store {
+  background: var(--violet);
+  color: #fff;
+  box-shadow: 0 14px 30px -12px rgba(124, 58, 237, .55);
+}
+.btn--store:hover {
+  background: var(--violet-deep);
+  box-shadow: 0 18px 38px -12px rgba(124, 58, 237, .65);
+}
+
+/* live-status dot: same slow breathe as the hero eyebrow, never a blink */
+.btn__pulse {
+  flex: none;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: rgba(255, 255, 255, .9);
+  animation: pulse 2s ease-in-out infinite;
+}
+
 /* ── Hero ───────────────────────────────────────────────────── */
 .hero {
   position: relative; min-height: 100svh;
@@ -1109,6 +1127,23 @@ main { position: relative; z-index: 4; }
 .contact__actions .btn { max-width: 100%; }
 .contact__actions .btn span { overflow-wrap: anywhere; }
 
+/* quiet aside: the store exists, but email stays the loudest ask */
+.contact__store {
+  max-width: 58ch;
+  margin-top: 26px;
+  padding: 20px 22px;
+  background: var(--paper);
+  border: 1px solid var(--line-soft); border-radius: var(--r);
+  box-shadow: var(--shadow-sm);
+}
+.contact__store p { font-size: 15px; margin-bottom: 14px; text-wrap: balance; }
+p.contact__store-eyebrow {
+  font-family: var(--mono); font-size: 10.5px; font-weight: 700;
+  letter-spacing: .22em; text-transform: uppercase;
+  color: var(--violet); margin-bottom: 8px;
+}
+.contact__store .btn { padding: 11px 22px; font-size: 14px; }
+
 .contact__links { display: grid; gap: 12px; }
 .contact__links a {
   display: flex; align-items: center; gap: 14px;
@@ -1377,6 +1412,15 @@ main { position: relative; z-index: 4; }
   box-shadow: 0 0 26px -6px rgba(0, 255, 156, .6);
 }
 :root[data-theme="dark"] .btn--solid:hover { box-shadow: 0 0 34px -4px rgba(0, 255, 156, .75); }
+/* the violet token remaps to acid lime here, so the store button's white
+   text and dot would wash out; both flip to the same near-black the other
+   solid buttons use */
+:root[data-theme="dark"] .btn--store {
+  color: #04120b;
+  box-shadow: 0 0 26px -6px rgba(182, 255, 58, .55);
+}
+:root[data-theme="dark"] .btn--store:hover { box-shadow: 0 0 34px -4px rgba(182, 255, 58, .7); }
+:root[data-theme="dark"] .btn__pulse { background: rgba(4, 18, 11, .65); }
 
 /* ── ambient ─────────────────────────────────────────────────── */
 :root[data-theme="dark"] .vignette {
@@ -1638,6 +1682,7 @@ main { position: relative; z-index: 4; }
   [data-reveal] { opacity: 1; transform: none; }
   .fx, .cursor-glow { display: none; }
   .caret { opacity: 1; }
+  .btn__pulse { animation: none; }
   .bars b::after { width: var(--w); transition: none; }
 }
 

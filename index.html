@@ -53,7 +53,7 @@
      always revalidated, so changing this string reaches visitors immediately,
      which a CloudFront invalidation alone cannot do: it clears the edge, not
      the browser. Bump it whenever css or js changes materially. -->
-<link rel="stylesheet" href="css/style.css?v=20260815">
+<link rel="stylesheet" href="css/style.css?v=20260815b">
 </head>
 <body>
 
@@ -155,6 +155,11 @@
         <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </a>
       <a href="#contact" class="btn btn--ghost"><span>Get in Touch</span></a>
+      <a href="store" class="btn btn--store">
+        <span class="btn__pulse" aria-hidden="true"></span>
+        <span>Store</span>
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
     </div>
 
     <ul class="stats" id="stats">
@@ -594,6 +599,12 @@
             <span>geniesolostech@gmail.com</span>
           </a>
           <a class="btn btn--ghost" href="tel:+12403219004"><span>240-321-9004</span></a>
+        </div>
+
+        <div class="contact__store">
+          <p class="contact__store-eyebrow">SELF-SERVE</p>
+          <p>Plans are priced in the open, from $299/month. Build a cart, check out, done.</p>
+          <a class="btn btn--store" href="store"><span>Browse the Store</span></a>
         </div>
       </div>
 
