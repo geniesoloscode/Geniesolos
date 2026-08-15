@@ -13,15 +13,39 @@ step: the deploy zips this single file.
 
 ```
 POST https://geniesolos.com/api/checkout
-{ "items": [ { "key": "storefront-build", "qty": 1 }, { "key": "server-care", "qty": 3 } ] }
+{ "items": [ { "key": "storefront-build", "qty": 1 }, { "key": "server-care", "qty": 3 } ],
+  "phone": "+1 (240) 321-9004" }
 
 200 { "url": "https://checkout.stripe.com/c/pay/cs_live_..." }
 400 { "error": "Pick one plan, not several." }        cart the customer can fix
+400 { "error": "Add a phone number so I can reach you before billing starts." }
 403 { "error": "Checkout only answers requests from https://geniesolos.com." }
 405 { "error": "Use POST to start checkout." }
 500 { "error": "Payment setup failed. ..." }          our misconfiguration
 502 { "error": "Payment setup failed. ..." }          Stripe was unreachable or refused
 ```
+
+## Why the drawer collects the phone
+
+The owner calls every customer before billing starts, so checkout must not finish
+without a number. Stripe cannot ask for it in setup mode; both of its collection
+features were tried against the real test-mode API on 2026-08-15 and rejected:
+
+- `phone_number_collection[enabled]=true`: **"You can only enable phone number
+  collection in payment and subscription mode."**
+- `custom_fields`: **"&#96;custom_fields&#96; is not supported when
+  &#96;mode=setup&#96;."** (the backticks are Stripe's own)
+
+So the cart drawer has its own labeled `tel` input, `js/store.js` validates it and
+sends it as `phone` beside `items`, and this function stores it in the session and
+SetupIntent metadata (see "Session parameters").
+
+`phone` is required: a string that, after trimming and stripping the separators
+people type (spaces, `(`, `)`, `-`, `.`, `+`), leaves 7 to 15 digits. Anything else
+is the 400 above, with the same words the drawer shows. Validation order is cart
+rules first, then the phone; the tests pin that order. What is stored is the
+trimmed original as the customer wrote it, never the bare digit string, capped at
+40 characters.
 
 ## `x-amz-content-sha256` is required on every POST
 
@@ -53,8 +77,8 @@ smoke tests in `scripts/setup-aws.ps1` send. Hash the bytes you actually send: a
 header that disagree fail the same way as a missing header.
 
 The client never sends prices, and this function never reads them from the request. Only
-`key` and `qty` are taken from each item; every other field, at the top level or inside an
-item, is dropped. Amounts live in Stripe. `PRICE_MAP` is still validated (a cart key it
+`key` and `qty` are taken from each item, plus the top-level `phone`; every other field,
+at the top level or inside an item, is dropped. Amounts live in Stripe. `PRICE_MAP` is still validated (a cart key it
 cannot serve is a 500 before Stripe is called) but nothing from it is sent: in setup mode
 no price is involved until the owner bills.
 
@@ -81,6 +105,8 @@ refuses, this refuses, with the same message.
 - `workspace-admin` only alongside a Storefront base
 - `qty` is a whole number, 1 to 20 for `server-care` and `db-care`, exactly 1 for
   everything else
+- after the cart passes, `phone` must trim and strip to 7 to 15 digits (see "Why the
+  drawer collects the phone")
 
 The catalog is duplicated here rather than imported. That is deliberate: the function
 ships alone. Prices are not duplicated, because Stripe holds them.
@@ -102,7 +128,9 @@ parameter below was verified against the real test-mode API on 2026-08-15.
 | `managed_payments[enabled]` | `false` | Managed Payments rejects `mode=setup` outright ("Invalid mode: setup"). |
 | `metadata[order]` | e.g. `lifeline x1, server-care x3` | Human summary of the order. |
 | `metadata[order_json]` | compact JSON of `{key, qty}` lines | Exact order. Metadata values cap at 500 chars; a 10 line cart fits. |
+| `metadata[phone]` | the trimmed `phone` from the request, first 40 chars | The number the drawer collected, as the customer wrote it. The webhook email reads it from here. |
 | `setup_intent_data[metadata][order]` | same string as `metadata[order]` | Puts the order text on the SetupIntent itself, so the dashboard customer view shows it without opening the session. Verified against the real test-mode API on 2026-08-15. |
+| `setup_intent_data[metadata][phone]` | same string as `metadata[phone]` | The phone on the SetupIntent too, same reason. |
 
 The Stripe call is form encoded, over `fetch`, with a 10 second `AbortSignal.timeout`.
 
@@ -123,8 +151,9 @@ handler verifies the `Stripe-Signature` header (HMAC-SHA256 of `<t>.<raw body>` 
 endpoint's `whsec_` secret, every `v1` entry compared timing-safe, timestamps more than
 300 seconds off rejected), then publishes a plain-text order summary to an SNS topic.
 The topic's confirmed email subscription is what lands in the inbox: the order lines,
-the customer's name and email, the session and customer IDs, and a deep link to the
-customer in the dashboard. Prices are never in the email; they live in Stripe. Any
+the customer's name, email and phone (from `metadata[phone]`, the number the drawer
+collected, falling back to Stripe's `customer_details.phone`, then "(none given)"),
+and a deep link to the customer in the dashboard. Prices are never in the email; they live in Stripe. Any
 other verified event type is answered `200 {"received":true}` and dropped. An SNS
 failure returns 500 on purpose, because Stripe retries failed deliveries.
 

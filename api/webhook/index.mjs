@@ -158,11 +158,20 @@ function composeEmail(stripeEvent) {
     lines.push('', 'Monthly lines (prices live in Stripe, bill from the dashboard):', ...monthly);
   }
 
+  /* The phone the drawer collected travels in the session metadata, because
+     Stripe cannot ask for one in setup mode; customer_details.phone stays as
+     a fallback for sessions that predate the drawer field. */
+  const phone =
+    (typeof metadata.phone === 'string' && metadata.phone.length > 0 && metadata.phone) ||
+    (typeof details.phone === 'string' && details.phone.length > 0 && details.phone) ||
+    '(none given)';
+
+  /* The dashboard link carries the customer id for anyone who needs it;
+     the raw ids added noise to the email and the owner asked them gone. */
   lines.push(
     '',
     `Customer: ${details.name || '(no name)'} <${details.email || '(no email)'}>`,
-    `Session: ${session.id || '(no session id)'}`,
-    `Customer id: ${customerId || '(no customer id)'}`,
+    `Phone: ${phone}`,
     `Dashboard: ${dashboard}`,
     '',
     'Approve or decline per "Approving an order" in api/README.md.'

@@ -21,7 +21,13 @@ const rawEv = (body, extra = {}) => ({
   body, isBase64Encoded: false, ...extra,
 });
 const ev = (body, extra = {}) => rawEv(JSON.stringify(body), extra);
-const cart = (...items) => ({ items });
+/* Every cart() body carries a valid phone: the handler checks cart rules
+   FIRST and the phone second, so rejection tests built from raw {items}
+   bodies fail on the cart before the phone is ever looked at, and only the
+   bodies meant to reach Stripe need one. That order gets its own test. */
+const PHONE = '+1 (240) 321-9004';
+const PHONE_ERROR = 'Add a phone number so I can reach you before billing starts.';
+const cart = (...items) => ({ items, phone: PHONE });
 const paramsOf = (call) => new URLSearchParams(call.opts.body);
 const orderOf = (call) => paramsOf(call).get('metadata[order]');
 const orderJsonOf = (call) => JSON.parse(paramsOf(call).get('metadata[order_json]'));
@@ -63,11 +69,16 @@ test('happy path returns the session url and sends the right params', async () =
   assert.equal(p.get('currency'), 'usd');
   assert.equal(p.get('customer_creation'), 'always');
   assert.equal(p.get('consent_collection[terms_of_service]'), 'required');
+  /* Stripe rejects phone_number_collection in setup mode outright, so the
+     param must never come back. The drawer collects the phone instead. */
+  assert.equal(p.get('phone_number_collection[enabled]'), null);
   assert.equal(p.get('success_url'), 'https://geniesolos.com/store?checkout=success');
   assert.equal(p.get('cancel_url'), 'https://geniesolos.com/store?checkout=cancelled');
   assert.equal(p.get('managed_payments[enabled]'), 'false');
   assert.equal(p.get('metadata[order]'), 'storefront-build x1, server-care x3');
+  assert.equal(p.get('metadata[phone]'), PHONE);
   assert.equal(p.get('setup_intent_data[metadata][order]'), p.get('metadata[order]'));
+  assert.equal(p.get('setup_intent_data[metadata][phone]'), PHONE);
   assert.deepEqual(orderJsonOf(lastCall), [
     { key: 'storefront-build', qty: 1 },
     { key: 'server-care', qty: 3 },
@@ -204,6 +215,62 @@ test('a duplicated line and an oversized cart are refused', async () => {
   assert.equal(lastCall, null);
 });
 
+test('a missing, short, junk or non-string phone is a 400 with the drawer message', async () => {
+  const bad = [
+    undefined,               /* missing entirely */
+    null,
+    2403219004,              /* right digits, wrong type */
+    '',
+    '   ',
+    '123456',                /* six digits: one short */
+    '1234567890123456',      /* sixteen digits: one long */
+    '+() -. .-',             /* separator junk only: strips to nothing */
+    'call me maybe',         /* letters survive the strip and fail */
+    '240-321-9004 ext 12',   /* so do extensions */
+  ];
+  for (const phone of bad) {
+    const body = { items: [{ key: 'lifeline', qty: 1 }] };
+    if (phone !== undefined) body.phone = phone;
+    const res = await handler(ev(body));
+    assert.equal(res.statusCode, 400);
+    assert.equal(JSON.parse(res.body).error, PHONE_ERROR);
+    assert.equal(lastCall, null);
+  }
+});
+
+test('7 and 15 digits are the walls; separators people type are fine', async () => {
+  for (const phone of ['1234567', '123456789012345', '+1 (240) 321-9004', '240.321.9004']) {
+    const res = await handler(ev({ items: [{ key: 'lifeline', qty: 1 }], phone }));
+    assert.equal(res.statusCode, 200);
+  }
+});
+
+test('the phone lands in both metadata params, trimmed but never stripped', async () => {
+  const res = await handler(ev({ items: [{ key: 'lifeline', qty: 1 }], phone: '  +1 (240) 321-9004  ' }));
+  assert.equal(res.statusCode, 200);
+  const p = paramsOf(lastCall);
+  /* The owner dials what the customer wrote: original punctuation, no
+     surrounding whitespace, and NOT the bare digit string. */
+  assert.equal(p.get('metadata[phone]'), '+1 (240) 321-9004');
+  assert.equal(p.get('setup_intent_data[metadata][phone]'), '+1 (240) 321-9004');
+});
+
+test('an absurdly punctuated phone over the cap is refused, never truncated', async () => {
+  const long = '+1 (240) 321-9004 . . . . . . . . . . . .';
+  assert.ok(long.length > 40);
+  const res = await handler(ev({ items: [{ key: 'lifeline', qty: 1 }], phone: long }));
+  assert.equal(res.statusCode, 400);
+  assert.equal(JSON.parse(res.body).error, PHONE_ERROR);
+  assert.equal(lastCall, null);
+});
+
+test('cart rules run before the phone: a bad cart wins the argument', async () => {
+  const res = await handler(ev({ items: [], phone: 'junk' }));
+  assert.equal(res.statusCode, 400);
+  assert.equal(JSON.parse(res.body).error, 'Your cart is empty.');
+  assert.equal(lastCall, null);
+});
+
 test('foreign origin rejected', async () => {
   const res = await handler(ev(cart({ key: 'lifeline', qty: 1 }), { headers: { origin: 'https://evil.example' } }));
   assert.equal(res.statusCode, 403);
@@ -225,6 +292,7 @@ test('a request with no Origin header is allowed, since signed access is the rea
 test('fields the client should not send are ignored, never priced', async () => {
   const res = await handler(ev({
     items: [{ key: 'lifeline', qty: 1, price: 'price_free', amount: 1, price_data: { unit_amount: 1 } }],
+    phone: PHONE,
     coupon: 'FREE', currency: 'btc', mode: 'payment', success_url: 'https://evil.example',
   }));
   assert.equal(res.statusCode, 200);
@@ -282,5 +350,13 @@ test('a broken price map or a missing secret never reaches Stripe', async () => 
   process.env.STRIPE_SECRET_KEY = '';
   const keyless = await handler(ev(cart({ key: 'lifeline', qty: 1 })));
   assert.equal(keyless.statusCode, 500);
+  assert.equal(lastCall, null);
+});
+
+test('a separator-padded phone over the cap is refused, never truncated', async () => {
+  const padded = '('.repeat(35) + '2403219004';
+  const res = await handler(ev({ items: [{ key: 'lifeline', qty: 1 }], phone: padded }));
+  assert.equal(res.statusCode, 400);
+  assert.equal(JSON.parse(res.body).error, PHONE_ERROR);
   assert.equal(lastCall, null);
 });

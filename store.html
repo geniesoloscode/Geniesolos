@@ -51,7 +51,7 @@
 <!-- The page's styles live in css/store.css, NOT inline: CloudFront attaches
      a Content-Security-Policy with style-src 'self', which blocks inline
      <style> blocks entirely. Same ?v= cache-busting rule as the homepage. -->
-<link rel="stylesheet" href="css/store.css?v=20260817">
+<link rel="stylesheet" href="css/store.css?v=20260818">
 </head>
 <body>
 
@@ -502,6 +502,16 @@
 
       <p class="drawer__note">Nothing is charged at checkout. I confirm your needs first, then billing begins.</p>
 
+      <!-- Collected here, not by Stripe: Checkout cannot ask for a phone in
+           setup mode (see api/README.md). js/store.js validates it and sends
+           it with the cart. -->
+      <div class="drawer__phone">
+        <label class="drawer__phone-label" for="phoneInput">Phone number</label>
+        <p class="drawer__phone-help" id="phoneHelp">So I can reach you before billing starts.</p>
+        <input class="drawer__phone-input" id="phoneInput" name="phone" type="tel"
+               autocomplete="tel" required aria-describedby="phoneHelp">
+      </div>
+
       <button class="btn btn--solid drawer__go" id="checkoutBtn" type="button">
         <span class="drawer__go-label">Checkout</span>
         <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -513,7 +523,7 @@
 </div>
 
 <script src="js/store-cart.js?v=20260815"></script>
-<script src="js/store.js?v=20260817"></script>
+<script src="js/store.js?v=20260818"></script>
 
 </body>
 </html>

@@ -27,7 +27,15 @@ const ev = (rawBody, extra = {}) => ({
   ...extra,
 });
 
-const completed = ({ livemode = false, order = 'storefront-build x1, server-care x3' } = {}) =>
+/* metaPhone is the phone the drawer collected (metadata[phone] on the
+   session); phone is Stripe's own customer_details.phone. undefined leaves
+   the field out entirely, the way a pre-drawer session arrives. */
+const completed = ({
+  livemode = false,
+  order = 'storefront-build x1, server-care x3',
+  phone = '+1 555-0100',
+  metaPhone = undefined,
+} = {}) =>
   JSON.stringify({
     id: 'evt_test_1',
     type: 'checkout.session.completed',
@@ -36,13 +44,14 @@ const completed = ({ livemode = false, order = 'storefront-build x1, server-care
       object: {
         id: 'cs_abc123',
         customer: 'cus_abc123',
-        customer_details: { name: 'Ada Lovelace', email: 'ada@example.com' },
+        customer_details: { name: 'Ada Lovelace', email: 'ada@example.com', phone },
         metadata: {
           order,
           order_json: JSON.stringify([
             { key: 'storefront-build', qty: 1 },
             { key: 'server-care', qty: 3 },
           ]),
+          ...(metaPhone === undefined ? {} : { phone: metaPhone }),
         },
       },
     },
@@ -82,10 +91,36 @@ test('a signed completed event becomes one SNS publish and a 200', async () => {
   assert.match(message, /server-care x3/);
   assert.match(message, /Ada Lovelace/);
   assert.match(message, /ada@example\.com/);
-  assert.match(message, /cs_abc123/);
-  assert.match(message, /cus_abc123/);
+  assert.match(message, /Phone: \+1 555-0100/);
+  /* Raw ids stay out of the prose (owner request); the id appears only
+     inside the dashboard URL. */
+  assert.doesNotMatch(message, /Session:/);
+  assert.doesNotMatch(message, /Customer id:/);
+  assert.doesNotMatch(message, /cs_abc123/);
   /* No invented amounts: prices live in Stripe, never in this email. */
   assert.doesNotMatch(message, /\$\s?\d/);
+});
+
+test('the phone the drawer collected outranks the one Stripe holds', async () => {
+  await handler(ev(completed({ metaPhone: '+1 (240) 555-0199', phone: '+1 555-0100' })));
+  assert.match(published[0].message, /Phone: \+1 \(240\) 555-0199/);
+  assert.doesNotMatch(published[0].message, /555-0100/);
+});
+
+test('without a metadata phone the email falls back to customer_details', async () => {
+  await handler(ev(completed({ phone: '+1 555-0100' })));
+  assert.match(published[0].message, /Phone: \+1 555-0100/);
+});
+
+test('an empty metadata phone falls through rather than printing a blank', async () => {
+  await handler(ev(completed({ metaPhone: '', phone: '+1 555-0100' })));
+  assert.match(published[0].message, /Phone: \+1 555-0100/);
+});
+
+test('with no phone anywhere it reads as none given, not undefined', async () => {
+  await handler(ev(completed({ phone: null })));
+  assert.match(published[0].message, /Phone: \(none given\)/);
+  assert.doesNotMatch(published[0].message, /undefined/);
 });
 
 test('livemode=false links into /test/ on the dashboard', async () => {

@@ -1,11 +1,12 @@
 /* Checkout session Lambda for geniesolos.com.
  *
- * One file, no dependencies, Node 22 ESM. It takes a cart from the store
- * drawer, revalidates it under the same rules the browser enforces and opens
- * a Stripe Checkout Session in setup mode: Stripe saves the customer's card
- * and charges nothing. The order rides along in the session metadata, and
- * the owner starts billing by hand from the dashboard after reviewing it
- * (see "Approving an order" in api/README.md).
+ * One file, no dependencies, Node 22 ESM. It takes a cart and a phone number
+ * from the store drawer, revalidates both under the same rules the browser
+ * enforces and opens a Stripe Checkout Session in setup mode: Stripe saves
+ * the customer's card and charges nothing. The order and the phone ride
+ * along in the session metadata, and the owner starts billing by hand from
+ * the dashboard after reviewing it and calling the customer (see "Approving
+ * an order" in api/README.md).
  *
  * The client never sends prices. PRICE_MAP still names every sellable key
  * and a cart it cannot serve still fails loudly, but nothing from it is sent
@@ -27,6 +28,11 @@ const CANCEL_URL = 'https://geniesolos.com/store?checkout=cancelled';
 
 const PAYMENT_FAILED =
   'Payment setup failed. Nothing was charged. Email geniesolostech@gmail.com if this keeps happening.';
+
+const PHONE_ERROR = 'Add a phone number so I can reach you before billing starts.';
+/* Metadata values cap at 500 characters, but a phone has no business being
+   long; 40 fits any 15 digit number with punctuation to spare. */
+const PHONE_MAX = 40;
 
 /* The rule table, duplicated from js/store-cart.js on purpose: this function
    ships alone, with no bundler and no shared module. Prices are deliberately
@@ -99,6 +105,26 @@ function validateCart(items) {
   return { ok: true };
 }
 
+/* The drawer collects the phone itself because Stripe rejects both of its
+   own collection knobs in setup mode, verified against the real test-mode
+   API on 2026-08-15: phone_number_collection ("You can only enable phone
+   number collection in payment and subscription mode.") and custom_fields
+   ("`custom_fields` is not supported when `mode=setup`.").
+
+   Kept in step with checkout() in js/store.js: trim, strip the separators
+   people type, then require 7 to 15 digits. Returns the trimmed original,
+   not the stripped digits, so the owner dials the number as the customer
+   wrote it. */
+function validPhone(phone) {
+  if (typeof phone !== 'string') return null;
+  const trimmed = phone.trim();
+  /* Over the metadata cap is invalid, not truncatable: slicing a
+     separator-padded phone could cut the digits off entirely. */
+  if (trimmed.length > PHONE_MAX) return null;
+  const digits = trimmed.replace(/[\s().+-]/g, '');
+  return /^\d{7,15}$/.test(digits) ? trimmed : null;
+}
+
 /* Read per request rather than at import time, so a console env edit takes
    effect on the next invocation instead of the next cold start. */
 function config() {
@@ -129,7 +155,7 @@ function priceIdsFor(priceMap, key) {
    loudly here, as a deploy mistake, instead of surfacing when the owner
    tries to bill. The order itself travels in metadata; values cap at 500
    characters and ten short lines fit with room to spare. */
-function buildParams(items, priceMap) {
+function buildParams(items, priceMap, phone) {
   for (const item of items) {
     if (!priceIdsFor(priceMap, item.key)) {
       throw new Error(`PRICE_MAP has no usable price IDs for ${item.key}`);
@@ -153,10 +179,15 @@ function buildParams(items, priceMap) {
   const summary = items.map((i) => `${i.key} x${i.qty}`).join(', ');
   params.set('metadata[order]', summary);
   params.set('metadata[order_json]', JSON.stringify(items));
-  // The same summary again on the SetupIntent itself, so the order text shows
+  // The phone the drawer collected, as the customer wrote it (trimmed, not
+  // stripped to digits); the webhook email and the approval call both read
+  // it from here.
+  params.set('metadata[phone]', phone.slice(0, PHONE_MAX));
+  // The same summary and phone again on the SetupIntent itself, so both show
   // directly on the SetupIntent and customer view in the dashboard instead of
   // only inside the session's metadata.
   params.set('setup_intent_data[metadata][order]', summary);
+  params.set('setup_intent_data[metadata][phone]', phone.slice(0, PHONE_MAX));
   return params;
 }
 
@@ -214,14 +245,21 @@ export const handler = async (event) => {
   const check = validateCart(payload && payload.items);
   if (!check.ok) return json(400, { error: check.error });
 
-  /* Rebuilt from the two fields we trust. Anything else the client sent,
+  /* Cart rules first, then the phone, the same order as the drawer: the
+     store surfaces cart problems while the cart is being built, so by the
+     time the phone can be wrong it is the only thing left to fix. The tests
+     pin this order. */
+  const phone = validPhone(payload && payload.phone);
+  if (!phone) return json(400, { error: PHONE_ERROR });
+
+  /* Rebuilt from the fields we trust. Anything else the client sent,
      price fields included, is dropped here rather than forwarded. */
   const items = payload.items.map((i) => ({ key: i.key, qty: i.qty }));
 
   let params;
   try {
     if (!cfg.secret) throw new Error('STRIPE_SECRET_KEY is not set');
-    params = buildParams(items, cfg.priceMap);
+    params = buildParams(items, cfg.priceMap, phone);
   } catch (err) {
     console.error('checkout is misconfigured:', err.message);
     return json(500, { error: PAYMENT_FAILED });

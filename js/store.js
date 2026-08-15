@@ -106,6 +106,7 @@
                      'Please try again in a moment, or email geniesolostech@gmail.com.';
 
   var items = [];
+  var phone = '';                        /* as typed; validated at checkout */
 
   var fab        = $('#cartFab');
   var badge      = $('#cartBadge');
@@ -121,16 +122,19 @@
   var errEl      = $('#cartError');
   var goBtn      = $('#checkoutBtn');
   var goLabel    = $('.drawer__go-label', goBtn);
+  var phoneEl    = $('#phoneInput');
 
   /* ── storage ─────────────────────────────────────────────── */
   function load() {
+    var none = { items: [], phone: '' };
+
     var raw = null;
-    try { raw = localStorage.getItem(STORE_KEY); } catch (e) { return []; }
-    if (!raw) return [];
+    try { raw = localStorage.getItem(STORE_KEY); } catch (e) { return none; }
+    if (!raw) return none;
 
     var parsed = null;
-    try { parsed = JSON.parse(raw); } catch (e) { return []; }   /* bad JSON: start clean */
-    if (!parsed || parsed.v !== 1 || !Array.isArray(parsed.items)) return [];
+    try { parsed = JSON.parse(raw); } catch (e) { return none; }   /* bad JSON: start clean */
+    if (!parsed || parsed.v !== 1 || !Array.isArray(parsed.items)) return none;
 
     var out = [];
     for (var i = 0; i < parsed.items.length; i++) {
@@ -141,13 +145,20 @@
       out.push({ key: it.key, qty: Math.min(qty, Cart.CATALOG[it.key].maxQty) });
     }
     /* A stored cart can violate the rules if the catalog changed under it;
-       setQty is a no-op filter here, so lean on validate at checkout time. */
-    return out;
+       setQty is a no-op filter here, so lean on validate at checkout time.
+       phone is optional and may be junk written by an old build or another
+       page; anything but a string reads as empty. */
+    return {
+      items: out,
+      phone: typeof parsed.phone === 'string' ? parsed.phone : ''
+    };
   }
 
   function save() {
+    var state = { v: 1, items: items };
+    if (phone) state.phone = phone;      /* optional: absent until typed */
     try {
-      localStorage.setItem(STORE_KEY, JSON.stringify({ v: 1, items: items }));
+      localStorage.setItem(STORE_KEY, JSON.stringify(state));
     } catch (e) { /* private mode: the cart lives for this page view only */ }
   }
 
@@ -532,7 +543,10 @@
      and re-rendering can never feed back. A null key is a wholesale clear. */
   window.addEventListener('storage', function (e) {
     if (e.key !== null && e.key !== STORE_KEY) return;
-    items = load();
+    var stored = load();
+    items = stored.items;
+    phone = stored.phone;
+    if (phoneEl) phoneEl.value = phone;
     render();
   });
 
@@ -591,6 +605,37 @@
   function hideError() {
     errEl.textContent = '';
     errEl.hidden = true;
+    /* the red ring on the phone input travels with the message */
+    if (phoneEl) phoneEl.removeAttribute('aria-invalid');
+  }
+
+  /* ── phone ───────────────────────────────────────────────── */
+  /* The drawer collects the phone itself: Stripe rejects both of its own
+     collection options in setup mode (see api/README.md). Kept in step with
+     validPhone in api/checkout/index.mjs: strip the separators people type,
+     then require 7 to 15 digits. */
+  var PHONE_ERR = 'Add a phone number so I can reach you before billing starts.';
+
+  function phoneOk(value) {
+    /* The 40-char cap matches PHONE_MAX in the Lambda: without it, a phone
+       padded with separators would validate here and then truncate to
+       garbage in the metadata. Trim first, exactly as the Lambda does. */
+    var trimmed = value.trim();
+    if (trimmed.length > 40) return false;
+    var digits = trimmed.replace(/[\s().+-]/g, '');
+    return /^\d{7,15}$/.test(digits);
+  }
+
+  if (phoneEl) {
+    phoneEl.addEventListener('input', function () {
+      phone = phoneEl.value;
+      save();
+      /* typing is the fix, so the error state clears as soon as it starts */
+      if (phoneEl.getAttribute('aria-invalid')) {
+        phoneEl.removeAttribute('aria-invalid');
+        hideError();
+      }
+    });
   }
 
   /* ── checkout ────────────────────────────────────────────── */
@@ -638,12 +683,28 @@
     if (busy) return;
     hideError();
 
+    /* Cart rules first, then the phone, the same order as the Lambda: cart
+       problems surface while the cart is built, so by the time the phone
+       can be wrong it is the only thing left to fix. */
     var check = Cart.validate(items);
     if (!check.ok) { showError(check.error); return; }
 
+    var phoneValue = phoneEl ? phoneEl.value.trim() : '';
+    if (!phoneOk(phoneValue)) {
+      if (phoneEl) {
+        phoneEl.setAttribute('aria-invalid', 'true');
+        phoneEl.focus();
+      }
+      showError(PHONE_ERR);
+      return;
+    }
+
     setBusy(true);
 
-    var payload = { items: items.map(function (it) { return { key: it.key, qty: it.qty }; }) };
+    var payload = {
+      items: items.map(function (it) { return { key: it.key, qty: it.qty }; }),
+      phone: phoneValue
+    };
     var body = JSON.stringify(payload);
 
     /* The hash must cover the exact bytes sent, so hash `body` and post `body`. */
@@ -806,9 +867,11 @@
      real content. Local files only, so it can never fire on the live site. */
   var seeded = location.protocol === 'file:' && /(^|[?&])seed=demo\b/.test(location.search);
 
+  var stored = load();
   items = seeded
     ? [{ key: 'storefront-build', qty: 1 }, { key: 'server-care', qty: 2 }, { key: 'workspace-admin', qty: 1 }]
-    : load();
+    : stored.items;
+  phone = stored.phone;
 
   (function returnState() {
     var state = stateParam('checkout');
@@ -816,12 +879,14 @@
 
     if (state === 'success') {
       items = [];                    /* paid for: the cart's work is done */
+      phone = '';                    /* the order carried it; done with it too */
       save();
     }
     showState(state);
     stripParam('checkout');          /* a refresh must not repeat the message */
   })();
 
+  if (phoneEl) phoneEl.value = phone;
   render();
 
   if (seeded) {
