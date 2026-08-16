@@ -51,7 +51,7 @@
 <!-- The page's styles live in css/store.css, NOT inline: CloudFront attaches
      a Content-Security-Policy with style-src 'self', which blocks inline
      <style> blocks entirely. Same ?v= cache-busting rule as the homepage. -->
-<link rel="stylesheet" href="css/store.css?v=20260816c">
+<link rel="stylesheet" href="css/store.css?v=20260816d">
 </head>
 <body>
 
@@ -272,13 +272,13 @@
       </article>
 
       <article class="card" data-reveal>
-        <span class="card__badge card__badge--sun">One&#8209;time $4,500</span>
+        <span class="card__badge card__badge--sun">$2,250 to start</span>
         <p class="card__kicker">Build + care</p>
         <h3 class="card__name">Storefront</h3>
-        <p class="card__price"><b>$4,500</b><span>once, then $149/month</span></p>
-        <p class="card__meta">Month-to-month after the build</p>
+        <p class="card__price"><b>$2,250</b><span>deposit, then $2,250 on completion, then $149/month</span></p>
+        <p class="card__meta">$4,500 build total &middot; month-to-month after</p>
         <ul class="feats">
-          <li>One-time build fee, billed with your first month</li>
+          <li>Half the build fee to start, half when the build is delivered</li>
           <li>Hosting, maintenance, and support included</li>
           <li>4-business-hour initial response</li>
           <li>Website ownership transfers when the build fee is paid in full</li>
@@ -491,12 +491,19 @@
 
       <dl class="totals">
         <div class="totals__row">
-          <dt>Monthly, after approval</dt>
+          <dt id="monthlyLabel">Monthly, after approval</dt>
           <dd id="totalMonthly">$0</dd>
         </div>
-        <div class="totals__row totals__row--once" id="onceRow" hidden>
-          <dt>One-time, after approval</dt>
-          <dd id="totalOnce">$0</dd>
+        <!-- Two rows rather than one "one-time" row: the Storefront build fee
+             is invoiced in halves, and a single $4,500 figure would name an
+             amount nobody is ever charged in one go. Each hides at zero. -->
+        <div class="totals__row totals__row--once" id="depositRow" hidden>
+          <dt>Due at approval</dt>
+          <dd id="totalDeposit">$0</dd>
+        </div>
+        <div class="totals__row totals__row--once" id="balanceRow" hidden>
+          <dt>Due on completion</dt>
+          <dd id="totalBalance">$0</dd>
         </div>
       </dl>
 
@@ -535,8 +542,8 @@
   </aside>
 </div>
 
-<script src="js/store-cart.js?v=20260816"></script>
-<script src="js/store.js?v=20260816c"></script>
+<script src="js/store-cart.js?v=20260816d"></script>
+<script src="js/store.js?v=20260816d"></script>
 
 </body>
 </html>
