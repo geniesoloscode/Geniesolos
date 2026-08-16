@@ -90,7 +90,7 @@ no price is involved until the owner bills.
 | Variable | Value | Notes |
 |---|---|---|
 | `STRIPE_SECRET_KEY` | `sk_test_...` / `sk_live_...` | Travels only in the `Authorization` header. Never logged. |
-| `PRICE_MAP` | JSON `{ "key": ["price_id", ...] }` | One entry per catalog key. `storefront-build` has **two** IDs: **recurring first, one-time second**. Validated on every request so catalog drift fails loudly, but never sent to Stripe; these are the IDs the owner bills with in the dashboard. |
+| `PRICE_MAP` | JSON `{ "key": ["price_id", ...] }` | One entry per catalog key. `storefront-build` has **three** IDs, in fixed order: **recurring, deposit, balance**. Validated on every request so catalog drift fails loudly, but never sent to Stripe; these are the IDs the owner bills with in the dashboard (see "Approving an order"). |
 | `ALLOWED_ORIGIN` | `https://geniesolos.com` | Origin check. Requests with no `Origin` header pass, because the signed CloudFront origin access is the real gate. |
 
 Read on every invocation, not at cold start, so a console edit takes effect immediately.
@@ -301,9 +301,8 @@ subscription**:
 
 - Add one subscription line per order key, with the order's quantity, using the price IDs
   from `scripts/price-map.<mode>.json` (the same map the Lambda validated).
-- A `storefront-build` order also owes the one-time $4,500 build fee: while creating the
-  subscription, add it as a one-time invoice item using the one-time price (the second ID
-  under `storefront-build` in the map).
+- A `storefront-build` order is not a single subscription creation — see the milestone
+  section below.
 - Bill the saved card; it is the customer's only payment method, so make it the default.
 - The receipt comes from Stripe's customer emails (dashboard runbook item 3).
 
@@ -312,6 +311,85 @@ Payments applying to dashboard billing. Either disable Managed Payments for that
 subscription, or add eligible tax codes to all eight products. The Lambda is unaffected
 either way: in setup mode there is no payment, and the session already opts out because
 Managed Payments does not support `mode=setup` at all.
+
+### Storefront (build + care): two milestones, not one
+
+The $4,500 build fee is invoiced in halves and the subscription does not start
+until the build is delivered. `scripts/price-map.<mode>.json` lists
+`storefront-build`'s three price ids in fixed order: **recurring, deposit,
+balance**.
+
+Every call below was verified against the real test-mode API on 2026-08-16.
+Three parameters here are not optional and are not obvious — without them the
+sequence fails **silently**, finalizing an empty $0 invoice that reports
+`status: paid` while nothing is charged.
+
+**On approval — invoice the deposit and charge it. Do not create the subscription.**
+
+```
+# `pricing[price]`, NOT `price` — a bare `price` is rejected outright
+POST /v1/invoiceitems   customer=cus_x
+                        pricing[price]=<deposit, 2nd id>
+                        description=Storefront build - deposit (1 of 2)
+
+# without pending_invoice_items_behavior=include this comes out with no lines
+# and a $0 total, and still says "paid"
+POST /v1/invoices       customer=cus_x
+                        collection_method=charge_automatically
+                        pending_invoice_items_behavior=include
+
+# finalize only moves draft -> open. It does NOT charge.
+POST /v1/invoices/in_x/finalize
+
+# the step that actually moves money, and answers immediately
+POST /v1/invoices/in_x/pay   payment_method=<pm_id>
+```
+
+Confirm `status: paid`, `amount_paid: 225000`, `attempted: true` before
+starting the build. Still `open` with `amount_paid: 0` means it did not charge.
+
+**Why explicit `/pay` and not `auto_advance=true`:** `auto_advance` works, but
+schedules the attempt roughly an hour out with no interim signal — observed
+`next_payment_attempt` ~59 minutes ahead with `attempted: false` throughout.
+Right for automated billing, useless when you need to know now.
+
+`payment_method` is explicit because the customer may have no
+`invoice_settings[default_payment_method]` set. The bare call fails with an
+error naming exactly that; the same call with `payment_method` succeeds.
+
+**Before the subscription**, set the saved card as the customer default:
+
+```
+POST /v1/customers/cus_x  invoice_settings[default_payment_method]=<pm_id>
+```
+
+**On completion — invoice the balance, then create the subscription.** In that
+order: a subscription's first invoice sweeps in pending invoice items, so the
+client receives one invoice for $2,250 + $149 and the monthly cycle starts that
+day. Verified three times: exactly two lines, and a deposit already collected
+does not reappear.
+
+```
+POST /v1/invoiceitems   customer=cus_x
+                        pricing[price]=<balance, 3rd id>
+                        description=Storefront build - balance (2 of 2)
+
+POST /v1/subscriptions  customer=cus_x
+                        items[0][price]=<recurring, 1st id>
+```
+
+Nothing in the system tracks that a build is half-paid. Deposits without a
+matching balance are queryable because the two halves are distinct prices —
+that is the reason they are distinct.
+
+**The old $4,500 price is archived.** It exists from before the split and is no
+longer in the price map. Archiving keeps it out of the dashboard price picker,
+where choosing it would silently bill a client twice what is due. Archiving is
+not deletion — existing references keep resolving.
+
+```
+POST /v1/prices/<old_4500_id>  active=false
+```
 
 **3. Decline.** Email the customer from geniesolostech@gmail.com that the order was not
 accepted and nothing was charged (no email is automatic), then **delete the customer**,
