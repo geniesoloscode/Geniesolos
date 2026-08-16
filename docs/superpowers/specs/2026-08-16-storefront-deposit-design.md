@@ -1,7 +1,8 @@
 # Storefront build fee, split into deposit and balance — Design Spec
 
 **Date:** 2026-08-16
-**Status:** Awaiting review
+**Status:** Approved 2026-08-16 — terms wording signed off, plate date settled
+at August, archive manifest included
 **Owner:** Gene Garland (geniesolostech)
 **Branch:** `storefront-deposit` (nothing reaches the site until this is merged)
 
@@ -135,18 +136,19 @@ taken before delivery, so it needs its own clause or the two contradict.)*
 
 ### Plate
 
-Document `GS-SERVICE-TERMS v2026-09`, revised `September 2026`.
+Document `GS-SERVICE-TERMS v2026-09`, revised `August 2026`.
 
-**Decided 2026-08-16, reasoning recorded because the identifier and the
-calendar disagree for two weeks.** §13 promises each version carries an
-identifier *and* an effective date, so the Revised field cannot be fudged. The
-deciding fact is that the live cutover has not happened: the store is in TEST
-mode, so no real customer can consent to any version before September anyway.
-By the time a consent record can exist, `September 2026` is simply true, and
-it agrees with the identifier for every reader thereafter.
+**Decided 2026-08-16.** The identifier and the Revised field disagree by a
+month, deliberately. §13 promises each version carries an identifier *and* an
+effective date, and the Revised field states a fact about the document's
+history rather than a prediction about when it will first be relied on: it was
+revised on 2026-08-16, so it says August. The identifier is a label, and
+labelling the next revision `2026-09` while still testing in August costs
+nothing, because nothing is live and no consent record can exist yet.
 
-The only exposure is going live within the next fortnight, which would put a
-slightly-ahead revision date on a document nobody has yet signed. Accepted.
+Rejected: dating it `September 2026` to match the identifier. That would put a
+date on the document that is not the date it was written, which is a bad
+property for a document whose whole job is to be produced later and believed.
 
 Both v2026-08 and v2026-09 were written on 2026-08-16; v2026-08 was live for a
 few hours and nobody subscribed under it. It is still kept and still served,
@@ -251,12 +253,14 @@ customers have already consented to — from being edited. Consent records carry
 its hash in Stripe, so tampering is detectable, but only by someone who thinks
 to go and look.
 
-Proposed with this change, since it is the moment the archive becomes plural:
-a small `terms/manifest.json` mapping each version to its SHA-256, with the
-drift test verifying **every** entry on every run. Cheap now, and it makes
-"the archive is intact" a build-time fact instead of an audit task.
+**Included**, since this is the moment the archive becomes plural: a small
+`terms/manifest.json` mapping each version to its SHA-256, with the drift test
+verifying **every** entry on every run. It makes "the archive is intact" a
+build-time fact instead of an audit task, and it is far cheaper to add now
+than once there are five versions and a paying customer behind one of them.
 
-Flagged rather than assumed — say if you would rather leave it.
+Isolated by design — one JSON file and one test — so it can be dropped later
+without touching anything else.
 
 ## 9. Rollout
 
