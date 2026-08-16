@@ -133,20 +133,25 @@ taken before delivery, so it needs its own clause or the two contradict.)*
 > For Storefront build + care, ownership transfers when the build fee is paid
 > in full, **meaning both parts of the $4,500 build fee**.
 
-### Plate — needs your call
+### Plate
 
-Document becomes `GS-SERVICE-TERMS v2026-09`. The **Revised** field is the
-awkward part, and §13 of the terms promises that "each version carries a
-version identifier and effective date", so it cannot just be fudged:
+Document `GS-SERVICE-TERMS v2026-09`, revised `September 2026`.
 
-- **`August 2026` (proposed).** Truthful — that is when it was revised and when
-  it goes live. Every statement in the document stays true; the only oddity is
-  an identifier naming a later month, which you accepted knowingly.
-- **`September 2026`.** Matches the identifier, but puts a future revision date
-  on a document being served in August. A document that misstates its own date
-  is a bad document to produce as evidence.
+**Decided 2026-08-16, reasoning recorded because the identifier and the
+calendar disagree for two weeks.** §13 promises each version carries an
+identifier *and* an effective date, so the Revised field cannot be fudged. The
+deciding fact is that the live cutover has not happened: the store is in TEST
+mode, so no real customer can consent to any version before September anyway.
+By the time a consent record can exist, `September 2026` is simply true, and
+it agrees with the identifier for every reader thereafter.
 
-Proposing **August 2026**. Say if you want it the other way.
+The only exposure is going live within the next fortnight, which would put a
+slightly-ahead revision date on a document nobody has yet signed. Accepted.
+
+Both v2026-08 and v2026-09 were written on 2026-08-16; v2026-08 was live for a
+few hours and nobody subscribed under it. It is still kept and still served,
+because a truthful record of what the site served costs nothing and deleting
+archives is the opposite of the discipline the drift test exists to enforce.
 
 ## 5. Stripe — option B
 
