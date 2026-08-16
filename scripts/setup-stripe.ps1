@@ -11,7 +11,8 @@
     missing, then writes the resulting price ids to
     scripts\price-map.<Mode>.json in the exact shape api/checkout/index.mjs's
     PRICE_MAP expects: { key: [priceId, ...] }, with storefront-build's
-    recurring price first and its one-time build fee second.
+    recurring price first, its build deposit second and its build balance
+    third.
 
     Idempotent by design: run it as many times as you like. Once every
     product and price exists, a second run finds everything and creates
@@ -44,18 +45,22 @@ $KeyFile   = Join-Path $RepoRoot "scripts\.secrets\stripe-$Mode.key"
 $MapFile   = Join-Path $RepoRoot "scripts\price-map.$Mode.json"
 $StripeApi = 'https://api.stripe.com'
 
-# Catalog: name -> price(s) in cents. storefront-build maps to TWO price ids,
-# recurring first and one-time second, because the checkout Lambda builds one
-# line item per array entry in map order (api/checkout/index.mjs,
-# buildParams). Every other key is a one-element array. The Lambda treats a
-# non-array or empty value as a config error, so this script always writes
-# arrays - see the @() wrapping down in the JSON-write step.
+# Catalog: name -> price(s) in cents. storefront-build maps to THREE price ids
+# in a fixed order - recurring, build deposit, build balance - because the
+# approval runbook names them by position. Every other key is a one-element
+# array. The Lambda treats a non-array or empty value as a config error, so
+# this script always writes arrays - see the @() wrapping down in the
+# JSON-write step.
 $Catalog = @(
     @{ Key = 'lifeline';         Name = 'GenieSolos Lifeline';                  Prices = @(@{ Amount = 29900;  Recurring = $true }) }
     @{ Key = 'presence';         Name = 'GenieSolos Presence';                  Prices = @(@{ Amount = 64900;  Recurring = $true }) }
     @{ Key = 'transformation';   Name = 'GenieSolos Transformation';            Prices = @(@{ Amount = 99900;  Recurring = $true }) }
     @{ Key = 'storefront-zero';  Name = 'GenieSolos Storefront (zero-down)';    Prices = @(@{ Amount = 49900;  Recurring = $true }) }
-    @{ Key = 'storefront-build'; Name = 'GenieSolos Storefront (build + care)'; Prices = @(@{ Amount = 14900; Recurring = $true }, @{ Amount = 450000; Recurring = $false }) }
+    @{ Key = 'storefront-build'; Name = 'GenieSolos Storefront (build + care)'; Prices = @(
+        @{ Amount = 14900;  Recurring = $true }
+        @{ Amount = 225000; Recurring = $false; Nickname = 'Storefront build deposit (1 of 2)' }
+        @{ Amount = 225000; Recurring = $false; Nickname = 'Storefront build balance (2 of 2)' }
+    ) }
     @{ Key = 'server-care';      Name = 'GenieSolos Server Care';               Prices = @(@{ Amount = 22500;  Recurring = $true }) }
     @{ Key = 'db-care';          Name = 'GenieSolos Database Care';             Prices = @(@{ Amount = 17500;  Recurring = $true }) }
     @{ Key = 'workspace-admin';  Name = 'GenieSolos Workspace Admin';           Prices = @(@{ Amount = 19900;  Recurring = $true }) }
@@ -143,7 +148,11 @@ try {
                 $startingAfter = $resp.data[$resp.data.Count - 1].id
             }
         } while ($startingAfter)
-        return $all
+        # Unary comma prevents PowerShell's pipeline from unrolling the list
+        # into a fixed-size array on return. Without it, a caller that later
+        # calls .Add() on the result (as the price loop does for a product
+        # with 2+ existing prices) throws "Collection was of a fixed size."
+        return ,$all
     }
 
     # Reconcile by exact name match against active products only, so a
@@ -156,14 +165,21 @@ try {
         return @{ Product = $created; Created = $true }
     }
 
-    # A price is reused when it matches on amount + currency + cadence:
-    # monthly recurring, or one-time (no recurring block at all). $Existing is
-    # the product's active price list, passed in so sibling prices on the
-    # same product (storefront-build's two) don't each re-fetch it.
+    # A price is reused when it matches on amount + currency + cadence +
+    # nickname. Nickname is in the rule because storefront-build now has TWO
+    # one-time prices at the same amount - deposit and balance - which are
+    # otherwise indistinguishable, and the second lookup would find the first
+    # and write one id twice.
+    #
+    # Both sides are cast to [string] so an absent nickname compares equal to
+    # Stripe's null. Every price created before nicknames existed has a null
+    # nickname, and without the cast each would stop matching itself and be
+    # duplicated on the next run.
     function Get-OrCreatePrice {
-        param([string]$ProductId, [int]$Amount, [bool]$IsRecurring, $Existing)
+        param([string]$ProductId, [int]$Amount, [bool]$IsRecurring, [string]$Nickname, $Existing)
         $match = $Existing | Where-Object {
-            $_.unit_amount -eq $Amount -and $_.currency -eq 'usd' -and (
+            $_.unit_amount -eq $Amount -and $_.currency -eq 'usd' -and
+            ([string]$_.nickname -eq [string]$Nickname) -and (
                 ($IsRecurring -and $_.recurring -and $_.recurring.interval -eq 'month') -or
                 ((-not $IsRecurring) -and (-not $_.recurring))
             )
@@ -172,6 +188,7 @@ try {
 
         $body = @{ product = $ProductId; unit_amount = "$Amount"; currency = 'usd' }
         if ($IsRecurring) { $body['recurring[interval]'] = 'month' }
+        if ($Nickname) { $body['nickname'] = $Nickname }
         $created = Invoke-Stripe -Method POST -Path '/v1/prices' -Body $body
         return @{ Price = $created; Created = $true }
     }
@@ -201,11 +218,12 @@ try {
 
         $ids = New-Object System.Collections.Generic.List[string]
         foreach ($priceSpec in $entry.Prices) {
-            $priceResult = Get-OrCreatePrice -ProductId $product.id -Amount $priceSpec.Amount -IsRecurring $priceSpec.Recurring -Existing $existingPrices
+            $priceResult = Get-OrCreatePrice -ProductId $product.id -Amount $priceSpec.Amount -IsRecurring $priceSpec.Recurring -Nickname $priceSpec.Nickname -Existing $existingPrices
             $ids.Add($priceResult.Price.id)
             if ($priceResult.Created) { $existingPrices.Add($priceResult.Price) }
 
             $detail = if ($priceSpec.Recurring) { "`$$([math]::Round($priceSpec.Amount / 100, 2))/mo" } else { "`$$([math]::Round($priceSpec.Amount / 100, 2)) one-time" }
+            if ($priceSpec.Nickname) { $detail = "$detail ($($priceSpec.Nickname))" }
             $Report.Add([pscustomobject]@{ Key = $entry.Key; Type = 'price'; Detail = $detail; Status = $(if ($priceResult.Created) { 'created' } else { 'found' }); Id = $priceResult.Price.id })
         }
 
@@ -217,10 +235,10 @@ try {
     }
 
     Write-Host ''
-    Write-Host ("  {0,-18} {1,-8} {2,-24} {3,-8} {4}" -f 'KEY', 'TYPE', 'DETAIL', 'STATUS', 'ID') -ForegroundColor White
+    Write-Host ("  {0,-18} {1,-8} {2,-46} {3,-8} {4}" -f 'KEY', 'TYPE', 'DETAIL', 'STATUS', 'ID') -ForegroundColor White
     foreach ($row in $Report) {
         $color = if ($row.Status -eq 'created') { 'Green' } else { 'DarkGray' }
-        Write-Host ("  {0,-18} {1,-8} {2,-24} {3,-8} {4}" -f $row.Key, $row.Type, $row.Detail, $row.Status, $row.Id) -ForegroundColor $color
+        Write-Host ("  {0,-18} {1,-8} {2,-46} {3,-8} {4}" -f $row.Key, $row.Type, $row.Detail, $row.Status, $row.Id) -ForegroundColor $color
     }
 
     $createdCount = ($Report | Where-Object { $_.Status -eq 'created' }).Count
