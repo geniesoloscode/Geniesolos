@@ -14,7 +14,7 @@
  * than a silent rewrite of what past customers agreed to. */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
@@ -96,4 +96,43 @@ test('the Lambda carries the hash of the archived document, byte for byte', () =
   assert.ok(pinned, 'TERMS_DOC_SHA256 is missing from api/checkout/index.mjs');
   assert.equal(pinned[1], actual);
   assert.match(pinned[1], /^[0-9a-f]{64}$/);
+});
+
+/* ── Archive integrity ─────────────────────────────────────────
+   The drift test above only ever watches the CURRENT version. Once the
+   archive goes plural, nothing else stops an older document — one customers
+   have already consented to — from being edited. The manifest is what makes
+   "the archive is intact" a build-time fact instead of an audit task. */
+
+test('every archived document still hashes to what the manifest recorded', () => {
+  const manifest = JSON.parse(read('terms/manifest.json'));
+  const entries = Object.entries(manifest);
+  assert.ok(entries.length > 0, 'the manifest is empty');
+
+  for (const [version, expected] of entries) {
+    const file = `terms/v${version}.html`;
+    assert.ok(existsSync(root + file), `${file} is in the manifest but not on disk`);
+    const actual = createHash('sha256').update(readFileSync(root + file)).digest('hex');
+    assert.equal(actual, expected, `${file} has changed since it was archived`);
+  }
+});
+
+test('no archived document is missing from the manifest', () => {
+  /* The other direction: a new version cut without a manifest entry would
+     otherwise be silently unguarded. */
+  const manifest = JSON.parse(read('terms/manifest.json'));
+  const archived = readdirSync(root + 'terms').filter((f) => /^v.+\.html$/.test(f));
+  assert.ok(archived.length > 0);
+
+  for (const file of archived) {
+    const version = file.replace(/^v/, '').replace(/\.html$/, '');
+    assert.ok(version in manifest, `terms/${file} is not listed in terms/manifest.json`);
+  }
+});
+
+test('the manifest agrees with the hash the Lambda pins for the current version', () => {
+  const manifest = JSON.parse(read('terms/manifest.json'));
+  const pinned = /const TERMS_DOC_SHA256 = '([^']+)'/.exec(read('api/checkout/index.mjs'));
+  assert.ok(pinned);
+  assert.equal(manifest[VERSION], pinned[1]);
 });
