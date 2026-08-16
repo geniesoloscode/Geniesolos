@@ -108,11 +108,11 @@ test('removing the last base takes every addon with it', () => {
 test('totals split monthly and once', () => {
   let r = GSCart.add([], 'storefront-build', 1);
   r = GSCart.add(r.items, 'server-care', 2);
-  assert.deepEqual(GSCart.totals(r.items), { monthly: 14900 + 2 * 22500, once: 450000 });
+  assert.deepEqual(GSCart.totals(r.items), { monthly: 14900 + 2 * 22500, once: 450000, deposit: 225000 });
 });
 
 test('totals of an empty cart are zero', () => {
-  assert.deepEqual(GSCart.totals([]), { monthly: 0, once: 0 });
+  assert.deepEqual(GSCart.totals([]), { monthly: 0, once: 0, deposit: 0 });
 });
 
 test('qty is clamped and integer', () => {
@@ -212,4 +212,51 @@ test('an unticked box blocks checkout, and only a real boolean true clears it', 
 
 test('the consent refusal carries the same words the drawer shows', () => {
   assert.equal(GSCart.TERMS_ERROR, 'Agree to the Service Terms before checking out.');
+});
+
+/* ── Split build fee ───────────────────────────────────────────
+   The Storefront build fee is billed in two equal parts, so the cart has to
+   say what is due when rather than showing one lump nobody is ever invoiced. */
+
+test('the storefront build fee is half at approval and half on completion', () => {
+  const p = GSCart.CATALOG['storefront-build'];
+  assert.equal(p.once, 450000);
+  assert.equal(p.deposit, 225000);
+  /* The balance is derived, never stored, so the two halves cannot drift. */
+  assert.equal(p.once - p.deposit, 225000);
+});
+
+test('totals report the deposit alongside the one-time total', () => {
+  const t = GSCart.totals([{ key: 'storefront-build', qty: 1 }]);
+  assert.equal(t.monthly, 14900);
+  assert.equal(t.once, 450000);
+  assert.equal(t.deposit, 225000);
+});
+
+test('a product with no split owes its whole one-time fee at approval', () => {
+  /* deposit === once is the uniform rule, so nothing downstream has to know
+     which products are split. */
+  const t = GSCart.totals([{ key: 'lifeline', qty: 1 }]);
+  assert.equal(t.once, 0);
+  assert.equal(t.deposit, 0);
+
+  for (const key of Object.keys(GSCart.CATALOG)) {
+    const p = GSCart.CATALOG[key];
+    if (typeof p.deposit !== 'number') {
+      const one = GSCart.totals([{ key, qty: 1 }]);
+      assert.equal(one.deposit, one.once, `${key} should owe its whole once up front`);
+    }
+  }
+});
+
+test('a split line moves the whole subscription start to completion', () => {
+  /* Add-ons ride the same subscription, so one split line defers everything. */
+  assert.equal(GSCart.startsAfterBuild([{ key: 'storefront-build', qty: 1 }]), true);
+  assert.equal(GSCart.startsAfterBuild([
+    { key: 'storefront-build', qty: 1 },
+    { key: 'server-care', qty: 2 }
+  ]), true);
+  assert.equal(GSCart.startsAfterBuild([{ key: 'storefront-zero', qty: 1 }]), false);
+  assert.equal(GSCart.startsAfterBuild([{ key: 'lifeline', qty: 1 }]), false);
+  assert.equal(GSCart.startsAfterBuild([]), false);
 });
