@@ -15,7 +15,7 @@ step: the deploy zips this single file.
 POST https://geniesolos.com/api/checkout
 { "items": [ { "key": "storefront-build", "qty": 1 }, { "key": "server-care", "qty": 3 } ],
   "phone": "+1 (240) 321-9004",
-  "termsAccepted": true, "termsVersion": "2026-08" }
+  "termsAccepted": true, "termsVersion": "2026-09" }
 
 200 { "url": "https://checkout.stripe.com/c/pay/cs_live_..." }
 400 { "error": "Pick one plan, not several." }        cart the customer can fix
@@ -171,6 +171,12 @@ it also compares the archived copy against `terms.html` word for word.
    edit to it, down to a comment, changes the hash.
 6. Run the tests. `tests/terms-version.test.mjs` is what tells you whether you missed a
    step; it prints the expected hash when that is the one you missed.
+7. Sweep this README for the old version string and update every live reference to it:
+   the example request body near the top of the file, the `metadata[terms_version]` row
+   in "Session parameters," and the "Proving the document is the right one" curl example
+   under "Approving an order" (both the URL and the printed hash). A grep for the old
+   version number, `grep -n "<old version>" api/README.md`, should turn up nothing but
+   genuine historical dates once this step is done.
 
 Never edit a file under `terms/`. Customers have already agreed to those words.
 
@@ -198,7 +204,7 @@ parameter below was verified against the real test-mode API on 2026-08-15.
 | `metadata[phone]` | the trimmed `phone` from the request, first 40 chars | The number the drawer collected, as the customer wrote it. The webhook email reads it from here. |
 | `setup_intent_data[metadata][order]` | same string as `metadata[order]` | Puts the order text on the SetupIntent itself, so the dashboard customer view shows it without opening the session. Verified against the real test-mode API on 2026-08-15. |
 | `setup_intent_data[metadata][phone]` | same string as `metadata[phone]` | The phone on the SetupIntent too, same reason. |
-| `metadata[terms_version]` | e.g. `2026-08` | Which document was agreed to. `terms/v2026-08.html` is that document. |
+| `metadata[terms_version]` | e.g. `2026-09` | Which document was agreed to. `terms/v2026-09.html` is that document. |
 | `metadata[terms_doc_sha256]` | 64 hex chars | SHA-256 of that document's exact bytes. Server side, from `TERMS_DOC_SHA256`. |
 | `metadata[terms_accepted_at]` | ISO 8601 UTC | Generated in the handler. Never read from the request body. |
 | `metadata[terms_accepted_ip]` | e.g. `198.51.100.7` | From `requestContext.http.sourceIp`, or `(unavailable)`. |
@@ -287,8 +293,8 @@ produce it, those two things together are what you send.
 equal the `terms_doc_sha256` on that customer's session:
 
 ```bash
-curl -s https://geniesolos.com/terms/v2026-08.html | sha256sum
-# 9fe0494dbbba9f098c4f1fda3d5800e531972450399b307515a4eb7ae126bec7
+curl -s https://geniesolos.com/terms/v2026-09.html | sha256sum
+# 2eee8290a0fa5989657982bc34dad4aba229f890f430825167cd28e35fc43a30
 ```
 
 Anyone can run that check against a copy you hand them, which is the point: it does not
