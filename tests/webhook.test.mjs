@@ -29,12 +29,23 @@ const ev = (rawBody, extra = {}) => ({
 
 /* metaPhone is the phone the drawer collected (metadata[phone] on the
    session); phone is Stripe's own customer_details.phone. undefined leaves
-   the field out entirely, the way a pre-drawer session arrives. */
+   the field out entirely, the way a pre-drawer session arrives.
+
+   consent is the clickwrap record the checkout Lambda writes; undefined
+   leaves all four keys out, the way a session from before consent shipped
+   arrives. */
+const CONSENT = {
+  terms_version: '2026-08',
+  terms_accepted_at: '2026-08-16T14:32:05.123Z',
+  terms_accepted_ip: '198.51.100.7',
+  terms_user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/140.0',
+};
 const completed = ({
   livemode = false,
   order = 'storefront-build x1, server-care x3',
   phone = '+1 555-0100',
   metaPhone = undefined,
+  consent = undefined,
 } = {}) =>
   JSON.stringify({
     id: 'evt_test_1',
@@ -52,6 +63,7 @@ const completed = ({
             { key: 'server-care', qty: 3 },
           ]),
           ...(metaPhone === undefined ? {} : { phone: metaPhone }),
+          ...(consent === undefined ? {} : consent),
         },
       },
     },
@@ -222,4 +234,36 @@ test('a subject with newlines and non-ASCII is sanitized to printable ASCII', as
   assert.equal(published.length, 1);
   assert.match(published[0].subject, /^[\x20-\x7E]+$/);
   assert.ok(!published[0].subject.includes('\n'));
+});
+
+/* ── Clickwrap consent in the order email ──────────────────────
+   Stripe holds the authoritative record; the email is the copy that lands
+   somewhere the owner already reads, so the evidence is not only inside one
+   vendor's dashboard. */
+
+test('the order email carries the consent record when the session has one', async () => {
+  const res = await handler(ev(completed({ consent: CONSENT })));
+  assert.equal(res.statusCode, 200);
+  const { message } = published[0];
+  assert.match(message, /Terms accepted: v2026-08 on 2026-08-16T14:32:05\.123Z/);
+  assert.match(message, /IP 198\.51\.100\.7/);
+  assert.match(message, /Mozilla\/5\.0 \(Windows NT 10\.0; Win64; x64\) Chrome\/140\.0/);
+});
+
+test('a session from before consent shipped still emails, and says the record is missing', async () => {
+  const res = await handler(ev(completed()));
+  assert.equal(res.statusCode, 200);
+  const { message } = published[0];
+  /* Silence would read as consent nobody bothered to print. */
+  assert.match(message, /Terms accepted: \(no record\)/);
+  assert.doesNotMatch(message, /undefined/);
+});
+
+test('a half-written consent record names what is missing rather than dropping the line', async () => {
+  const res = await handler(ev(completed({ consent: { terms_version: '2026-08' } })));
+  assert.equal(res.statusCode, 200);
+  const { message } = published[0];
+  assert.match(message, /Terms accepted: v2026-08 on \(no timestamp\)/);
+  assert.match(message, /IP \(no address\)/);
+  assert.doesNotMatch(message, /undefined/);
 });

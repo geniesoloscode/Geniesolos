@@ -186,3 +186,30 @@ test('every validation failure carries a readable message', () => {
   assert.equal(typeof out.error, 'string');
   assert.ok(out.error.length > 0);
 });
+
+/* ── Clickwrap consent ─────────────────────────────────────────
+   The drawer's third gate, after the cart and the phone. The rule lives here
+   rather than in js/store.js so it is the same code the tests run, and the
+   version string here is the one the whole system is pinned to: the drawer
+   label, the Lambda constant, the plate in terms.html and the archived copy
+   all have to match it (tests/terms-version.test.mjs). */
+
+test('the terms version is a bare identifier the whole system can share', () => {
+  assert.equal(GSCart.TERMS_VERSION, '2026-08');
+});
+
+test('an unticked box blocks checkout, and only a real boolean true clears it', () => {
+  assert.equal(GSCart.consentOk(true), true);
+
+  /* Everything else is a no, truthy included: a checkbox hands over a real
+     boolean, so a 'true' or a 1 arriving here means the value came from
+     somewhere it should not have (storage, an attribute, a hand-built body)
+     and consent was never actually given. */
+  for (const value of [false, undefined, null, 'true', 'on', 1, 0, {}, []]) {
+    assert.equal(GSCart.consentOk(value), false);
+  }
+});
+
+test('the consent refusal carries the same words the drawer shows', () => {
+  assert.equal(GSCart.TERMS_ERROR, 'Agree to the Service Terms before checking out.');
+});

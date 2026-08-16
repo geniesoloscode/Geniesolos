@@ -123,6 +123,8 @@
   var goBtn      = $('#checkoutBtn');
   var goLabel    = $('.drawer__go-label', goBtn);
   var phoneEl    = $('#phoneInput');
+  var termsEl    = $('#termsAccept');
+  var termsVerEl = $('#termsVersion');
 
   /* ── storage ─────────────────────────────────────────────── */
   function load() {
@@ -605,8 +607,10 @@
   function hideError() {
     errEl.textContent = '';
     errEl.hidden = true;
-    /* the red ring on the phone input travels with the message */
+    /* the red ring on the phone input and the consent box travels with the
+       message */
     if (phoneEl) phoneEl.removeAttribute('aria-invalid');
+    if (termsEl) termsEl.removeAttribute('aria-invalid');
   }
 
   /* ── phone ───────────────────────────────────────────────── */
@@ -635,6 +639,33 @@
         phoneEl.removeAttribute('aria-invalid');
         hideError();
       }
+    });
+  }
+
+  /* ── clickwrap consent ───────────────────────────────────── */
+  /* The rule and the version live in js/store-cart.js, the file the tests
+     load, so this page never spells either of them out. The Lambda holds its
+     own copy of the version and refuses a checkout that names a different
+     one, which is what makes a stale page fail loudly instead of recording
+     consent to a document we no longer serve.
+
+     Never persisted, unlike the phone. A ticked box restored from storage,
+     from a bfcache restore, or from a browser's own form-state recovery would
+     be a record of a decision nobody made this time, so consent starts over
+     on every load. */
+  function resetConsent() {
+    if (termsEl) {
+      termsEl.checked = false;
+      termsEl.removeAttribute('aria-invalid');
+    }
+  }
+
+  if (termsVerEl) termsVerEl.textContent = 'Version ' + Cart.TERMS_VERSION;
+
+  if (termsEl) {
+    termsEl.addEventListener('change', function () {
+      /* ticking it is the fix, so the error clears the moment it happens */
+      if (termsEl.checked && termsEl.getAttribute('aria-invalid')) hideError();
     });
   }
 
@@ -683,9 +714,10 @@
     if (busy) return;
     hideError();
 
-    /* Cart rules first, then the phone, the same order as the Lambda: cart
-       problems surface while the cart is built, so by the time the phone
-       can be wrong it is the only thing left to fix. */
+    /* Cart rules first, then the phone, then consent, the same order as the
+       Lambda: cart problems surface while the cart is built, so by the time
+       the phone can be wrong it is the only thing left to fix, and the box
+       comes last because it is the last control above Checkout. */
     var check = Cart.validate(items);
     if (!check.ok) { showError(check.error); return; }
 
@@ -699,11 +731,24 @@
       return;
     }
 
+    if (!Cart.consentOk(termsEl ? termsEl.checked : false)) {
+      if (termsEl) {
+        termsEl.setAttribute('aria-invalid', 'true');
+        termsEl.focus();
+      }
+      showError(Cart.TERMS_ERROR);
+      return;
+    }
+
     setBusy(true);
 
     var payload = {
       items: items.map(function (it) { return { key: it.key, qty: it.qty }; }),
-      phone: phoneValue
+      phone: phoneValue,
+      /* The tick and the version this page displayed. When and from where are
+         the Lambda's to observe, so they are deliberately not sent. */
+      termsAccepted: true,
+      termsVersion: Cart.TERMS_VERSION
     };
     var body = JSON.stringify(payload);
 
@@ -740,6 +785,10 @@
   window.addEventListener('pageshow', function (e) {
     if (!e.persisted) return;
     hideError();
+    /* A restored page comes back with the box exactly as it was left, which
+       for someone who has just been to Stripe and pressed Back is a tick from
+       a checkout that already happened. Consent is per attempt. */
+    resetConsent();
     setBusy(false);
   });
 
@@ -887,6 +936,10 @@
   })();
 
   if (phoneEl) phoneEl.value = phone;
+  /* Last word on the box, after any browser form-state restore: a soft reload
+     in Firefox hands back the tick it saw before, and that tick belongs to a
+     page view that is over. */
+  resetConsent();
   render();
 
   if (seeded) {

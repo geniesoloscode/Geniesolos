@@ -11,6 +11,16 @@
 
   var MAX_LINES = 10;
 
+  /* The version of terms.html a visitor is agreeing to, and the one place it
+     is written down for the browser. The drawer renders it, sends it with the
+     cart, and the Lambda refuses a checkout whose version is not the one it
+     knows, so a stale page cannot record consent to a document nobody is
+     serving any more. CURRENT_TERMS_VERSION in api/checkout/index.mjs, the
+     plate in terms.html and the archived copy under terms/ all carry the same
+     string; tests/terms-version.test.mjs fails the build if they drift. */
+  var TERMS_VERSION = '2026-08';
+  var TERMS_ERROR = 'Agree to the Service Terms before checking out.';
+
   /* monthly and once are integer cents. kind decides what a line needs in the
      cart beside it: 'addon' needs any plan, 'storefront-addon' needs one of
      the two Storefront plans. */
@@ -187,8 +197,20 @@
     return { ok: true };
   }
 
+  /* Strict boolean only. A ticked checkbox hands over a real `true`; a 'true'
+     or a 1 reaching here came from storage, an attribute or a hand-built
+     request body, none of which is a person agreeing to anything. Kept in
+     step with the Lambda, which refuses everything but `termsAccepted === true`
+     for the same reason. */
+  function consentOk(accepted) {
+    return accepted === true;
+  }
+
   return {
     CATALOG: CATALOG,
+    TERMS_VERSION: TERMS_VERSION,
+    TERMS_ERROR: TERMS_ERROR,
+    consentOk: consentOk,
     add: add,
     remove: remove,
     setQty: setQty,

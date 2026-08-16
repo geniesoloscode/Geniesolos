@@ -57,11 +57,17 @@ $HtmlFiles      = @('index.html', '404.html', 'terms.html', 'store.html')
 # must come first. MUST stay identical to .github/workflows/deploy.yml -
 # both run --delete, so divergence makes each undo the other. The drift
 # check below compares the two sequences on every run.
+# terms/* is the archive of dated service-terms versions. Each file is
+# immutable once cut and is what a customer's checkout consent record points
+# at, so it ships with the site rather than living only in the repo. Synced
+# rather than listed in $HtmlFiles because the set grows with every new
+# version and nobody should have to remember to add one here.
 $SyncFilters = @(
     '--exclude', '*',
     '--include', 'css/*',
     '--include', 'js/*',
     '--include', 'assets/*',
+    '--include', 'terms/*',
     '--include', 'robots.txt',
     '--include', 'sitemap.xml'
 )

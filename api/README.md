@@ -14,11 +14,14 @@ step: the deploy zips this single file.
 ```
 POST https://geniesolos.com/api/checkout
 { "items": [ { "key": "storefront-build", "qty": 1 }, { "key": "server-care", "qty": 3 } ],
-  "phone": "+1 (240) 321-9004" }
+  "phone": "+1 (240) 321-9004",
+  "termsAccepted": true, "termsVersion": "2026-08" }
 
 200 { "url": "https://checkout.stripe.com/c/pay/cs_live_..." }
 400 { "error": "Pick one plan, not several." }        cart the customer can fix
 400 { "error": "Add a phone number so I can reach you before billing starts." }
+400 { "error": "Agree to the Service Terms before checking out." }
+400 { "error": "Your page is out of date. Reload the store ..." }   stale terms version
 403 { "error": "Checkout only answers requests from https://geniesolos.com." }
 405 { "error": "Use POST to start checkout." }
 500 { "error": "Payment setup failed. ..." }          our misconfiguration
@@ -107,9 +110,57 @@ refuses, this refuses, with the same message.
   everything else
 - after the cart passes, `phone` must trim and strip to 7 to 15 digits (see "Why the
   drawer collects the phone")
+- after the phone passes, `termsAccepted` must be boolean `true` and `termsVersion`
+  must equal `CURRENT_TERMS_VERSION` (see "Clickwrap consent")
+
+Cart rules first, then the phone, then consent. The tests pin that order, because the
+drawer surfaces problems in the same sequence and a customer should only ever be told
+about the next thing they can fix.
 
 The catalog is duplicated here rather than imported. That is deliberate: the function
 ships alone. Prices are not duplicated, because Stripe holds them.
+
+## Clickwrap consent
+
+Month-to-month clients never sign the Master Service Agreement, so the ticked box in
+the drawer is the entire agreement. It is only evidence if we can say **which document**
+was agreed to, **when**, and **from where**, and if none of that came from the party it
+would be used against.
+
+So the split is: the browser asserts the tick and names the version it displayed; the
+handler observes everything else.
+
+| Field | Source | Notes |
+|---|---|---|
+| `termsAccepted` | client | Must be boolean `true`. `'true'`, `1` and `'on'` are refused: a checkbox hands over a real boolean, so anything else came from storage, an attribute, or a hand-built body. |
+| `termsVersion` | client | Must equal `CURRENT_TERMS_VERSION`. A mismatch is a 400, never a silent accept, because it means the visitor was shown a page that is not the one live now. |
+| timestamp | **handler** | `new Date().toISOString()`. A client-supplied one is ignored, not echoed. |
+| IP | **handler** | `event.requestContext.http.sourceIp`, or `(unavailable)` when absent. |
+| user agent | **handler** | Request header, truncated to 500 chars, or `(none sent)`. Truncated rather than refused: a clipped agent is still useful and the visitor cannot change their browser's header. |
+
+**One version string, four places.** `TERMS_VERSION` in `js/store-cart.js` is where the
+browser reads it. `CURRENT_TERMS_VERSION` here is the copy this function ships with.
+The plate in `terms.html` carries it, and `terms/v<version>.html` is the immutable copy
+of the document itself. Nothing imports anything, the same way the catalog is
+duplicated, so `tests/terms-version.test.mjs` fails the build if any of them drift, and
+it also compares the archived copy against `terms.html` word for word.
+
+**Cutting a new version** — the only correct way to change the terms:
+
+1. Edit `terms.html`.
+2. Bump `TERMS_VERSION` in `js/store-cart.js` and `CURRENT_TERMS_VERSION` here.
+3. Update the plate's `GS-SERVICE-TERMS v...` line in `terms.html`.
+4. `cp terms.html terms/v<new>.html`, then in the copy: make the asset paths
+   root-relative, set the canonical and the archive notice to the new version, and keep
+   `noindex`.
+5. Run the tests. `tests/terms-version.test.mjs` is what tells you whether you missed a
+   step.
+
+Never edit a file under `terms/`. Customers have already agreed to those words.
+
+The archive ships because `terms/*` is on the sync whitelist in **both**
+`scripts/deploy.ps1` and `.github/workflows/deploy.yml`; deployment is default-deny, so
+a new directory that is not listed there exists in the repo and nowhere else.
 
 ## Session parameters
 
@@ -131,6 +182,16 @@ parameter below was verified against the real test-mode API on 2026-08-15.
 | `metadata[phone]` | the trimmed `phone` from the request, first 40 chars | The number the drawer collected, as the customer wrote it. The webhook email reads it from here. |
 | `setup_intent_data[metadata][order]` | same string as `metadata[order]` | Puts the order text on the SetupIntent itself, so the dashboard customer view shows it without opening the session. Verified against the real test-mode API on 2026-08-15. |
 | `setup_intent_data[metadata][phone]` | same string as `metadata[phone]` | The phone on the SetupIntent too, same reason. |
+| `metadata[terms_version]` | e.g. `2026-08` | Which document was agreed to. `terms/v2026-08.html` is that document. |
+| `metadata[terms_accepted_at]` | ISO 8601 UTC | Generated in the handler. Never read from the request body. |
+| `metadata[terms_accepted_ip]` | e.g. `198.51.100.7` | From `requestContext.http.sourceIp`, or `(unavailable)`. |
+| `metadata[terms_user_agent]` | request header, first 500 chars | Or `(none sent)`. |
+| `setup_intent_data[metadata][terms_*]` | same four values | Written in the same pass as the session copy, so the two cannot drift. |
+
+Seven metadata keys on the session and six on the SetupIntent, well inside Stripe's
+limit of 50 per object, and every value inside the 500-character cap. The consent
+record is four separate keys rather than one packed JSON blob so each reads on its own
+in the dashboard.
 
 The Stripe call is form encoded, over `fetch`, with a 10 second `AbortSignal.timeout`.
 
@@ -198,6 +259,14 @@ customer page under **Payment methods**. The order is in the Checkout Session's 
 `metadata[order_json]` the exact `{key, qty}` lines. Read it from the
 `checkout.session.completed` event listed on the customer page (Events, at the bottom),
 or from the CLI: `stripe checkout sessions list --limit 5`.
+
+The same metadata carries the consent record: `metadata[terms_version]`,
+`terms_accepted_at`, `terms_accepted_ip` and `terms_user_agent`. The order email repeats
+all four. That record plus `terms/v<version>.html` is the whole agreement for a
+month-to-month client who never signed an MSA, so if you ever have to produce it, those
+two things together are what you send. A completed session with no consent fields
+predates this feature (the email says `Terms accepted: (no record)`); that customer
+agreed to nothing in writing and should be asked to before service continues.
 
 **2. Approve: create the subscription by hand.** On the customer page choose **Create
 subscription**:
@@ -267,6 +336,11 @@ node --test "tests/*.test.mjs"
 
 `tests/checkout.test.mjs` stubs `globalThis.fetch`, so it exercises the real handler and
 asserts on the exact parameters sent to Stripe. Nothing reaches the network.
+
+`tests/terms-version.test.mjs` is the one to watch when editing the service terms: it
+pins the version string across `js/store-cart.js`, `api/checkout/index.mjs`, `terms.html`
+and `terms/`, checks the archived copy still matches the live document word for word,
+and checks both deploy paths still publish the archive.
 
 ---
 

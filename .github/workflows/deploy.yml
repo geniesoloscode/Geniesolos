@@ -56,11 +56,16 @@ jobs:
           # remembered to exclude it. Order matters - "*" must come first.
           # Keep identical to $SyncFilters in scripts/deploy.ps1; both run
           # --delete, so divergence makes each undo the other.
+          #
+          # terms/* is the archive of dated service-terms versions: each file
+          # is immutable once cut and is what a customer's checkout consent
+          # record points at, so it has to be served, not just committed.
           aws s3 sync . "s3://$BUCKET" --delete \
             --exclude "*" \
             --include "css/*" \
             --include "js/*" \
             --include "assets/*" \
+            --include "terms/*" \
             --include "robots.txt" \
             --include "sitemap.xml" \
             --cache-control "public, max-age=300, s-maxage=604800"

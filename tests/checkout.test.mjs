@@ -15,19 +15,28 @@ process.env.PRICE_MAP = JSON.stringify(PRICE_MAP);
 
 const { handler } = await import('../api/checkout/index.mjs');
 
+/* A real request carries a source IP and a user agent; the consent record is
+   built from those, never from the body. */
+const IP = '198.51.100.7';
+const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/140.0 Safari/537.36';
 const rawEv = (body, extra = {}) => ({
-  requestContext: { http: { method: 'POST', path: '/api/checkout' } },
-  headers: { origin: 'https://geniesolos.com' },
+  requestContext: { http: { method: 'POST', path: '/api/checkout', sourceIp: IP } },
+  headers: { origin: 'https://geniesolos.com', 'user-agent': UA },
   body, isBase64Encoded: false, ...extra,
 });
 const ev = (body, extra = {}) => rawEv(JSON.stringify(body), extra);
-/* Every cart() body carries a valid phone: the handler checks cart rules
-   FIRST and the phone second, so rejection tests built from raw {items}
-   bodies fail on the cart before the phone is ever looked at, and only the
-   bodies meant to reach Stripe need one. That order gets its own test. */
+/* Every cart() body carries a valid phone and a ticked consent box: the
+   handler checks cart rules FIRST, the phone second and consent third, so
+   rejection tests built from raw {items} bodies fail on the cart before the
+   phone is ever looked at, and only the bodies meant to reach Stripe need
+   the rest. That order gets its own test. */
 const PHONE = '+1 (240) 321-9004';
 const PHONE_ERROR = 'Add a phone number so I can reach you before billing starts.';
-const cart = (...items) => ({ items, phone: PHONE });
+const TERMS_VERSION = '2026-08';
+const TERMS_ERROR = 'Agree to the Service Terms before checking out.';
+const STALE_ERROR = 'Your page is out of date. Reload the store and agree to the current Service Terms.';
+const CONSENT = { termsAccepted: true, termsVersion: TERMS_VERSION };
+const cart = (...items) => ({ items, phone: PHONE, ...CONSENT });
 const paramsOf = (call) => new URLSearchParams(call.opts.body);
 const orderOf = (call) => paramsOf(call).get('metadata[order]');
 const orderJsonOf = (call) => JSON.parse(paramsOf(call).get('metadata[order_json]'));
@@ -240,13 +249,13 @@ test('a missing, short, junk or non-string phone is a 400 with the drawer messag
 
 test('7 and 15 digits are the walls; separators people type are fine', async () => {
   for (const phone of ['1234567', '123456789012345', '+1 (240) 321-9004', '240.321.9004']) {
-    const res = await handler(ev({ items: [{ key: 'lifeline', qty: 1 }], phone }));
+    const res = await handler(ev({ items: [{ key: 'lifeline', qty: 1 }], phone, ...CONSENT }));
     assert.equal(res.statusCode, 200);
   }
 });
 
 test('the phone lands in both metadata params, trimmed but never stripped', async () => {
-  const res = await handler(ev({ items: [{ key: 'lifeline', qty: 1 }], phone: '  +1 (240) 321-9004  ' }));
+  const res = await handler(ev({ items: [{ key: 'lifeline', qty: 1 }], phone: '  +1 (240) 321-9004  ', ...CONSENT }));
   assert.equal(res.statusCode, 200);
   const p = paramsOf(lastCall);
   /* The owner dials what the customer wrote: original punctuation, no
@@ -292,7 +301,7 @@ test('a request with no Origin header is allowed, since signed access is the rea
 test('fields the client should not send are ignored, never priced', async () => {
   const res = await handler(ev({
     items: [{ key: 'lifeline', qty: 1, price: 'price_free', amount: 1, price_data: { unit_amount: 1 } }],
-    phone: PHONE,
+    phone: PHONE, ...CONSENT,
     coupon: 'FREE', currency: 'btc', mode: 'payment', success_url: 'https://evil.example',
   }));
   assert.equal(res.statusCode, 200);
@@ -358,5 +367,161 @@ test('a separator-padded phone over the cap is refused, never truncated', async 
   const res = await handler(ev({ items: [{ key: 'lifeline', qty: 1 }], phone: padded }));
   assert.equal(res.statusCode, 400);
   assert.equal(JSON.parse(res.body).error, PHONE_ERROR);
+  assert.equal(lastCall, null);
+});
+
+/* ── Clickwrap consent ─────────────────────────────────────────
+   The drawer asserts it, this handler never trusts it, and what ends up in
+   the metadata is the record we can produce later: which version, when, from
+   where, in what browser. The when and the where are ours, not the client's. */
+
+test('a missing, false or non-boolean termsAccepted is a 400 with the drawer message', async () => {
+  const bad = [
+    undefined,        /* missing entirely: an old page, or a hand-built body */
+    false,            /* the box is there and untouched */
+    null,
+    'true',           /* truthy, but nobody ticked anything */
+    'on',             /* what a raw form post would send */
+    1,
+    {},
+  ];
+  for (const termsAccepted of bad) {
+    const body = { items: [{ key: 'lifeline', qty: 1 }], phone: PHONE, termsVersion: TERMS_VERSION };
+    if (termsAccepted !== undefined) body.termsAccepted = termsAccepted;
+    const res = await handler(ev(body));
+    assert.equal(res.statusCode, 400);
+    assert.equal(JSON.parse(res.body).error, TERMS_ERROR);
+    assert.equal(lastCall, null);
+  }
+});
+
+test('a missing, wrong or non-string termsVersion is a 400 naming the stale page', async () => {
+  const bad = [
+    undefined,        /* a page from before consent shipped */
+    '',
+    '2026-07',        /* a real version, but not the one we serve */
+    '2027-01',
+    'v2026-08',       /* the display form, not the identifier */
+    2026,
+    null,
+    { version: '2026-08' },
+  ];
+  for (const termsVersion of bad) {
+    const body = { items: [{ key: 'lifeline', qty: 1 }], phone: PHONE, termsAccepted: true };
+    if (termsVersion !== undefined) body.termsVersion = termsVersion;
+    const res = await handler(ev(body));
+    assert.equal(res.statusCode, 400);
+    /* Not the consent message: the box WAS ticked, so telling the visitor to
+       tick it would be a lie. The fix is a reload. */
+    assert.equal(JSON.parse(res.body).error, STALE_ERROR);
+    assert.equal(lastCall, null);
+  }
+});
+
+test('consent lands in the session and on the SetupIntent, all four fields', async () => {
+  const before = new Date().toISOString();
+  const res = await handler(ev(cart({ key: 'lifeline', qty: 1 })));
+  assert.equal(res.statusCode, 200);
+
+  const p = paramsOf(lastCall);
+  assert.equal(p.get('metadata[terms_version]'), TERMS_VERSION);
+  assert.equal(p.get('metadata[terms_accepted_ip]'), IP);
+  assert.equal(p.get('metadata[terms_user_agent]'), UA);
+
+  const at = p.get('metadata[terms_accepted_at]');
+  assert.match(at, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+  assert.ok(at >= before && at <= new Date().toISOString());
+
+  /* Mirrored onto the SetupIntent the way the phone already is, so the record
+     shows on the SetupIntent and customer views too, not only inside the
+     session. */
+  for (const key of ['terms_version', 'terms_accepted_at', 'terms_accepted_ip', 'terms_user_agent']) {
+    assert.equal(p.get(`setup_intent_data[metadata][${key}]`), p.get(`metadata[${key}]`));
+  }
+});
+
+test('the timestamp and the IP are ours: what the client sends is dropped, never echoed', async () => {
+  const res = await handler(ev({
+    items: [{ key: 'lifeline', qty: 1 }],
+    phone: PHONE, ...CONSENT,
+    /* Every shape a forged record could arrive in, camelCase and the
+       metadata's own snake_case. */
+    termsAcceptedAt: '1999-01-01T00:00:00.000Z',
+    termsAcceptedIp: '203.0.113.9',
+    termsUserAgent: 'ForgedAgent/1.0',
+    terms_accepted_at: '1999-01-01T00:00:00.000Z',
+    terms_accepted_ip: '203.0.113.9',
+    terms_user_agent: 'ForgedAgent/1.0',
+  }));
+  assert.equal(res.statusCode, 200);
+
+  const p = paramsOf(lastCall);
+  assert.equal(p.get('metadata[terms_accepted_ip]'), IP);
+  assert.equal(p.get('metadata[terms_user_agent]'), UA);
+  assert.notEqual(p.get('metadata[terms_accepted_at]'), '1999-01-01T00:00:00.000Z');
+  assert.match(p.get('metadata[terms_accepted_at]'), /^20[2-9]\d-/);
+
+  /* The point of the feature: none of it survives anywhere in the request. */
+  assert.doesNotMatch(lastCall.opts.body, /1999|203\.0\.113\.9|ForgedAgent/);
+});
+
+test('a source IP we never got is recorded as missing, not as an empty string', async () => {
+  const res = await handler(ev(cart({ key: 'lifeline', qty: 1 }), {
+    requestContext: { http: { method: 'POST', path: '/api/checkout' } },
+  }));
+  assert.equal(res.statusCode, 200);
+  const p = paramsOf(lastCall);
+  /* An empty value would read as "we looked and there was nothing"; this
+     says we never had it, which is the honest record. */
+  assert.equal(p.get('metadata[terms_accepted_ip]'), '(unavailable)');
+  assert.equal(p.get('setup_intent_data[metadata][terms_accepted_ip]'), '(unavailable)');
+});
+
+test('a request with no user agent still records consent', async () => {
+  const res = await handler(ev(cart({ key: 'lifeline', qty: 1 }), {
+    headers: { origin: 'https://geniesolos.com' },
+  }));
+  assert.equal(res.statusCode, 200);
+  assert.equal(paramsOf(lastCall).get('metadata[terms_user_agent]'), '(none sent)');
+});
+
+test('the user agent header is read whatever its casing', async () => {
+  const res = await handler(ev(cart({ key: 'lifeline', qty: 1 }), {
+    headers: { origin: 'https://geniesolos.com', 'User-Agent': UA },
+  }));
+  assert.equal(res.statusCode, 200);
+  assert.equal(paramsOf(lastCall).get('metadata[terms_user_agent]'), UA);
+});
+
+test('an oversized user agent is truncated to the metadata cap, never refused', async () => {
+  const long = 'Mozilla/5.0 ' + 'X'.repeat(900);
+  assert.ok(long.length > 500);
+  const res = await handler(ev(cart({ key: 'lifeline', qty: 1 }), {
+    headers: { origin: 'https://geniesolos.com', 'user-agent': long },
+  }));
+  /* Unlike the phone, a clipped user agent is still a useful record and the
+     visitor cannot do anything about their browser's header, so this
+     truncates where the phone refuses. */
+  assert.equal(res.statusCode, 200);
+  const stored = paramsOf(lastCall).get('metadata[terms_user_agent]');
+  assert.equal(stored.length, 500);
+  assert.equal(stored, long.slice(0, 500));
+});
+
+test('cart rules run before the phone, and the phone before consent', async () => {
+  /* All three wrong at once: the cart wins. */
+  const noCart = await handler(ev({ items: [], phone: 'junk', termsAccepted: false }));
+  assert.equal(JSON.parse(noCart.body).error, 'Your cart is empty.');
+
+  /* Cart fixed, phone and consent still wrong: the phone wins. */
+  const noPhone = await handler(ev({
+    items: [{ key: 'lifeline', qty: 1 }], phone: 'junk', termsAccepted: false,
+  }));
+  assert.equal(JSON.parse(noPhone.body).error, PHONE_ERROR);
+
+  /* Cart and phone fixed: consent is the only thing left to fix. */
+  const noConsent = await handler(ev({ items: [{ key: 'lifeline', qty: 1 }], phone: PHONE }));
+  assert.equal(JSON.parse(noConsent.body).error, TERMS_ERROR);
+
   assert.equal(lastCall, null);
 });

@@ -137,6 +137,29 @@ function orderLines(orderJson) {
   }
 }
 
+/* The clickwrap record the checkout Lambda wrote onto the session: which
+   version of terms.html the customer agreed to, when, from where, in what
+   browser. Stripe holds the authoritative copy; this puts it somewhere the
+   owner already reads, so the evidence is not only inside one vendor's
+   dashboard.
+
+   Every field is named even when absent. A session from before consent
+   shipped has none of these, and a line that quietly disappeared would read
+   as consent nobody bothered to print. */
+function consentLines(metadata) {
+  const field = (value, missing) =>
+    typeof value === 'string' && value.length > 0 ? value : missing;
+
+  if (typeof metadata.terms_version !== 'string' || metadata.terms_version.length < 1) {
+    return ['Terms accepted: (no record)'];
+  }
+  return [
+    `Terms accepted: v${metadata.terms_version} on ${field(metadata.terms_accepted_at, '(no timestamp)')}`,
+    `  IP ${field(metadata.terms_accepted_ip, '(no address)')}`,
+    `  ${field(metadata.terms_user_agent, '(no user agent)')}`,
+  ];
+}
+
 function composeEmail(stripeEvent) {
   const session = (stripeEvent.data && stripeEvent.data.object) || {};
   const metadata = session.metadata || {};
@@ -173,6 +196,8 @@ function composeEmail(stripeEvent) {
     `Customer: ${details.name || '(no name)'} <${details.email || '(no email)'}>`,
     `Phone: ${phone}`,
     `Dashboard: ${dashboard}`,
+    '',
+    ...consentLines(metadata),
     '',
     'Approve or decline per "Approving an order" in api/README.md.'
   );

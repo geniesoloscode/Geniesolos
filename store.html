@@ -51,7 +51,7 @@
 <!-- The page's styles live in css/store.css, NOT inline: CloudFront attaches
      a Content-Security-Policy with style-src 'self', which blocks inline
      <style> blocks entirely. Same ?v= cache-busting rule as the homepage. -->
-<link rel="stylesheet" href="css/store.css?v=20260818">
+<link rel="stylesheet" href="css/store.css?v=20260816">
 </head>
 <body>
 
@@ -512,18 +512,31 @@
                autocomplete="tel" required aria-describedby="phoneHelp">
       </div>
 
+      <!-- Clickwrap consent, directly above Checkout because it is the last
+           thing agreed to before leaving for Stripe. Unticked on every load
+           and never restored from storage: a record is only worth keeping if
+           the box was ticked deliberately, this time. js/store.js fills the
+           version in from GSCart.TERMS_VERSION so the string is written down
+           once, and blocks Checkout until the box is ticked; the Lambda
+           revalidates it and stamps the time and the IP itself. -->
+      <div class="drawer__consent">
+        <input class="drawer__consent-box" id="termsAccept" type="checkbox"
+               aria-describedby="termsVersion">
+        <label class="drawer__consent-label" for="termsAccept">I have read and agree to the
+          GenieSolos <a href="terms" target="_blank" rel="noopener">Service Terms</a>.</label>
+        <p class="drawer__consent-ver" id="termsVersion"></p>
+      </div>
+
       <button class="btn btn--solid drawer__go" id="checkoutBtn" type="button">
         <span class="drawer__go-label">Checkout</span>
         <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
-
-      <p class="drawer__terms">By checking out you agree to the <a href="terms">Service Terms</a>.</p>
     </footer>
   </aside>
 </div>
 
-<script src="js/store-cart.js?v=20260815"></script>
-<script src="js/store.js?v=20260818"></script>
+<script src="js/store-cart.js?v=20260816"></script>
+<script src="js/store.js?v=20260816"></script>
 
 </body>
 </html>

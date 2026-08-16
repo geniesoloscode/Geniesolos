@@ -1,12 +1,19 @@
 /* Checkout session Lambda for geniesolos.com.
  *
- * One file, no dependencies, Node 22 ESM. It takes a cart and a phone number
- * from the store drawer, revalidates both under the same rules the browser
- * enforces and opens a Stripe Checkout Session in setup mode: Stripe saves
- * the customer's card and charges nothing. The order and the phone ride
- * along in the session metadata, and the owner starts billing by hand from
- * the dashboard after reviewing it and calling the customer (see "Approving
- * an order" in api/README.md).
+ * One file, no dependencies, Node 22 ESM. It takes a cart, a phone number and
+ * a ticked consent box from the store drawer, revalidates all three under the
+ * same rules the browser enforces and opens a Stripe Checkout Session in setup
+ * mode: Stripe saves the customer's card and charges nothing. The order, the
+ * phone and the consent record ride along in the session metadata, and the
+ * owner starts billing by hand from the dashboard after reviewing it and
+ * calling the customer (see "Approving an order" in api/README.md).
+ *
+ * The consent record is the evidence that a customer agreed to a specific
+ * version of the service terms, which for a month-to-month client who never
+ * signs an MSA is the only agreement there is. The client asserts the tick
+ * and names the version it displayed; the time and the address are observed
+ * HERE and never read from the body, because a record the other party could
+ * write is not evidence of anything.
  *
  * The client never sends prices. PRICE_MAP still names every sellable key
  * and a cart it cannot serve still fails loudly, but nothing from it is sent
@@ -33,6 +40,30 @@ const PHONE_ERROR = 'Add a phone number so I can reach you before billing starts
 /* Metadata values cap at 500 characters, but a phone has no business being
    long; 40 fits any 15 digit number with punctuation to spare. */
 const PHONE_MAX = 40;
+
+/* The version of terms.html this deploy serves, duplicated from
+   TERMS_VERSION in js/store-cart.js on purpose: this function ships alone,
+   with no bundler and no shared module, the same reason CATALOG is duplicated
+   below. terms/v2026-08.html is the immutable copy of what that string names,
+   and tests/terms-version.test.mjs fails the build if any of them drift. */
+const CURRENT_TERMS_VERSION = '2026-08';
+
+const TERMS_ERROR = 'Agree to the Service Terms before checking out.';
+/* A ticked box naming a version we do not serve means the visitor was shown a
+   page that is not the one live now, so the tick is real but the document
+   behind it is unknown. Telling them to tick the box would be a lie; the fix
+   is a reload. */
+const STALE_TERMS_ERROR =
+  'Your page is out of date. Reload the store and agree to the current Service Terms.';
+
+/* The full metadata cap: unlike the phone, a clipped user agent is still a
+   useful record and the visitor cannot do anything about their browser's
+   header, so this truncates where the phone refuses. */
+const UA_MAX = 500;
+/* Said out loud rather than left blank, so a later reader can tell "we never
+   had it" from "we looked and it was empty". */
+const IP_UNKNOWN = '(unavailable)';
+const UA_UNKNOWN = '(none sent)';
 
 /* The rule table, duplicated from js/store-cart.js on purpose: this function
    ships alone, with no bundler and no shared module. Prices are deliberately
@@ -125,6 +156,27 @@ function validPhone(phone) {
   return /^\d{7,15}$/.test(digits) ? trimmed : null;
 }
 
+/* Kept in step with consentOk in js/store-cart.js: strict boolean only. A
+   ticked checkbox hands over a real `true`; a 'true' or a 1 arriving here came
+   from storage, an attribute or a hand-built body, none of which is a person
+   agreeing to anything. */
+function consentGiven(accepted) {
+  return accepted === true;
+}
+
+/* Built from the request, never from the body. The tick and the version are
+   the client's claims; when and from where are ours. */
+function consentRecord(event) {
+  const ip = event?.requestContext?.http?.sourceIp;
+  const ua = headerOf(event, 'user-agent');
+  return {
+    version: CURRENT_TERMS_VERSION,
+    at: new Date().toISOString(),
+    ip: typeof ip === 'string' && ip.length > 0 ? ip : IP_UNKNOWN,
+    userAgent: typeof ua === 'string' && ua.length > 0 ? ua.slice(0, UA_MAX) : UA_UNKNOWN,
+  };
+}
+
 /* Read per request rather than at import time, so a console env edit takes
    effect on the next invocation instead of the next cold start. */
 function config() {
@@ -155,7 +207,7 @@ function priceIdsFor(priceMap, key) {
    loudly here, as a deploy mistake, instead of surfacing when the owner
    tries to bill. The order itself travels in metadata; values cap at 500
    characters and ten short lines fit with room to spare. */
-function buildParams(items, priceMap, phone) {
+function buildParams(items, priceMap, phone, consent) {
   for (const item of items) {
     if (!priceIdsFor(priceMap, item.key)) {
       throw new Error(`PRICE_MAP has no usable price IDs for ${item.key}`);
@@ -188,6 +240,21 @@ function buildParams(items, priceMap, phone) {
   // only inside the session's metadata.
   params.set('setup_intent_data[metadata][order]', summary);
   params.set('setup_intent_data[metadata][phone]', phone.slice(0, PHONE_MAX));
+
+  // The consent record, written to both objects in one pass so the copy on
+  // the SetupIntent can never drift from the copy on the session. Four short
+  // keys rather than one packed JSON blob: each is readable on its own in the
+  // dashboard, and none of them comes near the 500-character value cap.
+  const record = {
+    terms_version: consent.version,
+    terms_accepted_at: consent.at,
+    terms_accepted_ip: consent.ip,
+    terms_user_agent: consent.userAgent,
+  };
+  for (const [key, value] of Object.entries(record)) {
+    params.set(`metadata[${key}]`, value);
+    params.set(`setup_intent_data[metadata][${key}]`, value);
+  }
   return params;
 }
 
@@ -245,21 +312,32 @@ export const handler = async (event) => {
   const check = validateCart(payload && payload.items);
   if (!check.ok) return json(400, { error: check.error });
 
-  /* Cart rules first, then the phone, the same order as the drawer: the
-     store surfaces cart problems while the cart is being built, so by the
-     time the phone can be wrong it is the only thing left to fix. The tests
-     pin this order. */
+  /* Cart rules first, then the phone, then consent, the same order as the
+     drawer: the store surfaces cart problems while the cart is being built,
+     so by the time the phone can be wrong it is the only thing left to fix,
+     and the box sits last because it is the last control above Checkout. The
+     tests pin this order. */
   const phone = validPhone(payload && payload.phone);
   if (!phone) return json(400, { error: PHONE_ERROR });
+
+  if (!consentGiven(payload && payload.termsAccepted)) {
+    return json(400, { error: TERMS_ERROR });
+  }
+  if ((payload && payload.termsVersion) !== CURRENT_TERMS_VERSION) {
+    return json(400, { error: STALE_TERMS_ERROR });
+  }
 
   /* Rebuilt from the fields we trust. Anything else the client sent,
      price fields included, is dropped here rather than forwarded. */
   const items = payload.items.map((i) => ({ key: i.key, qty: i.qty }));
+  /* Observed here, so termsAcceptedAt or termsAcceptedIp in the body go the
+     same way as the price fields above: nowhere. */
+  const consent = consentRecord(event);
 
   let params;
   try {
     if (!cfg.secret) throw new Error('STRIPE_SECRET_KEY is not set');
-    params = buildParams(items, cfg.priceMap, phone);
+    params = buildParams(items, cfg.priceMap, phone, consent);
   } catch (err) {
     console.error('checkout is misconfigured:', err.message);
     return json(500, { error: PAYMENT_FAILED });

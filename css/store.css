@@ -1071,16 +1071,49 @@ html { scrollbar-color: var(--violet-bright) var(--cream-2); }
   box-shadow: 0 0 0 3px rgba(255, 143, 122, .14);
 }
 
+/* Clickwrap consent, sitting between the phone and the Checkout button. The
+   box is a real checkbox, not a styled span: it has to be focusable, it has
+   to announce its own state, and a <label for> has to tick it. Only the
+   accent colour and the 20px box are ours; the rest is the browser's. */
+.drawer__consent {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 10px;
+  margin-bottom: 14px;
+}
+.drawer__consent-box {
+  width: 20px; height: 20px;
+  margin: 1px 0 0;
+  accent-color: var(--violet);
+  cursor: pointer;
+}
+.drawer__consent-box:focus-visible { outline: 3px solid var(--violet); outline-offset: 2px; }
+/* The same red the phone field wears when the drawer is complaining. */
+.drawer__consent-box[aria-invalid="true"] {
+  outline: 2px solid #B3261E;
+  outline-offset: 2px;
+}
+.drawer__consent-label {
+  font-size: 13.5px; line-height: 1.55; color: var(--ink-2);
+  cursor: pointer;
+}
+.drawer__consent-label a { color: var(--violet); border-bottom: 1px dashed rgba(124, 58, 237, .45); }
+.drawer__consent-label a:hover { color: var(--green-deep); border-color: var(--green-deep); }
+/* Written by js/store.js from GSCart.TERMS_VERSION, so the version string is
+   never typed into this page. Column 2 keeps it under the label, indented
+   past the box. */
+.drawer__consent-ver {
+  grid-column: 2;
+  font-family: var(--mono); font-size: 11px; color: var(--muted);
+}
+:root[data-theme="dark"] .drawer__consent-box { accent-color: var(--green); }
+:root[data-theme="dark"] .drawer__consent-box:focus-visible { outline-color: var(--green); }
+:root[data-theme="dark"] .drawer__consent-box[aria-invalid="true"] { outline-color: #ff8f7a; }
+:root[data-theme="dark"] .drawer__consent-label a { border-bottom-color: rgba(182, 255, 58, .5); }
+
 .drawer__go { width: 100%; }
 .drawer__go[disabled] { opacity: .55; cursor: not-allowed; }
 .drawer__go[disabled]:hover { transform: none; box-shadow: 0 14px 30px -12px rgba(23, 161, 94, .55); }
-.drawer__terms {
-  margin-top: 10px; text-align: center;
-  font-family: var(--mono); font-size: 11px; color: var(--muted); line-height: 1.6;
-}
-.drawer__terms a { color: var(--violet); border-bottom: 1px dashed rgba(124, 58, 237, .45); }
-.drawer__terms a:hover { color: var(--green-deep); border-color: var(--green-deep); }
-:root[data-theme="dark"] .drawer__terms a { border-bottom-color: rgba(182, 255, 58, .5); }
 
 /* ── Toasts ─────────────────────────────────────────────────── */
 .toasts {
