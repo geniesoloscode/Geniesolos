@@ -377,3 +377,85 @@ deposit is invoiced by hand after the review call").
 `cus_V5Le7tayGRXdwH` (the param-rename probe) were both deleted via `DELETE
 /v1/customers/:id`; both refetches returned `deleted: true`. No Stripe test
 objects from this task remain outstanding.
+
+## Second pass — corrected sequence (2026-08-16)
+
+Authorized because the recommended fix above was itself an unverified
+assertion (a docs reading, not a live result). Ran the corrected sequence
+end to end on one fresh customer, `cus_V5LnwBXhgoFadr` (deleted afterward,
+confirmed — see below), applying both corrections: `pricing[price]=<id>` on
+every invoice-item call, and `pending_invoice_items_behavior=include` on the
+approval-time `POST /v1/invoices`. Used two throwaway one-time prices with
+**distinct** amounts — deposit `225000`, balance `175000` — created under the
+existing `storefront-build` product so the amount alone, not just the
+description, proves which item landed where; both archived (`active=false`)
+during cleanup.
+
+**Milestone 1 (corrected).** Invoice `in_1U5B5nEEEbkqqitbGFxMR5bd`: **1 line,
+total `225000`** ("DRY RUN pass2 deposit (1 of 2)") — the
+`pending_invoice_items_behavior=include` fix works, confirmed. `GET
+.../invoiceitems?...&pending=true` afterward returned **0** — the deposit
+item was consumed, not left dangling. Both of these hold exactly as
+recommended.
+
+**But the invoice did not finalize as paid.** Status after finalize, and
+again on refetch two seconds later: `open`, `amount_paid: 0`, `attempted:
+false`, `attempt_count: 0`. Checked Stripe's own docs for automatic
+invoice collection: `auto_advance` defaults to `false` on `POST
+/v1/invoices` (confirmed via the create-invoice reference fetched during
+pass 1), and per the automatic-advancement doc, "Attempting payments for
+auto-charge invoices" is gated on `auto_advance: true` — with it false,
+`collection_method: charge_automatically` alone does not trigger a charge
+attempt. Finalize only moves the invoice `draft → open`; it does not, by
+itself, charge the card. **This is a third fix §6 needs**, not just the two
+already identified: the approval-time invoice create/finalize call must also
+set `auto_advance=true`, or the runbook must add an explicit `POST
+.../invoices/:id/pay` call, or the deposit invoice sits open and uncollected
+indefinitely.
+
+Tried `POST .../invoices/:id/pay` on this same invoice afterward, out of
+sequence (after the customer had already been deleted per the cleanup step
+below) — it failed: `"Invoice can't be paid: Customer deleted"`. So this
+specific invoice ended up permanently stuck open. Whether an explicit `/pay`
+call *before* customer deletion would have succeeded was not tested — the
+customer was already gone by the time this was checked. That ordering is a
+gap in this pass, not a resolved fact, and is the next thing to verify.
+
+**Milestone 2 (corrected).** Balance item `pricing[price]`, then subscription
+on the recurring price. `sub_1U5B5sEEEbkqqitbcdHH0jn7`, `latest_invoice`
+`in_1U5B5sEEEbkqqitbJ3AHBPpv`: status `paid`, `amount_paid: 189900`, **exactly
+2 lines**:
+
+```
+DRY RUN pass2 balance (2 of 2)                                175000
+1 × GenieSolos Storefront (build + care) (at $149.00 / month)   14900
+```
+
+The deposit did **not** reappear — confirmed both by line count (2, not 3)
+and by amount (no `225000` line present). This is exactly what the
+coordinator's four checks asked for on this half, and it held.
+
+**Scorecard against the four things the coordinator asked to be proven:**
+
+| Check | Held? |
+|---|---|
+| Milestone 1 carries the deposit line and a non-zero total | Yes |
+| Milestone 1 finalizes as genuinely paid | **No** — `open`, `amount_paid: 0`, never attempted |
+| Deposit item shows consumed (0 pending) after milestone 1 | Yes |
+| Milestone 2 has exactly 2 lines (balance + recurring), no deposit | Yes |
+
+**Revised go/no-go: still NO-GO, narrower reason.** Both corrections from the
+first pass are now proven live, not just docs-asserted. A third, previously
+unknown gap replaces them: without `auto_advance=true` (or an explicit `/pay`
+call) on the approval-time invoice, the deposit is correctly itemized but
+never actually charged. §6 needs all three fixes — `pricing[price]`,
+`pending_invoice_items_behavior=include`, and `auto_advance=true` (or an
+explicit pay step) — and the pay-before-cleanup ordering question above
+should be resolved before Task 7 treats the runbook as final.
+
+**Cleanup.** Customer `cus_V5LnwBXhgoFadr` deleted via `DELETE
+/v1/customers/:id`; refetch returned `deleted: true`. Both throwaway prices
+archived via `POST /v1/prices/:id active=false`; refetch confirmed
+`active: false` on both (`price_1U5B5kEEEbkqqitbvGsvWxfN`,
+`price_1U5B5lEEEbkqqitbCEXDW1TN`). No product was created — both prices were
+attached to the existing `storefront-build` product, which is unaffected.
