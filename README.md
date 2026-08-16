@@ -32,11 +32,15 @@ js/terms.js         terms page theme toggle (external, same CSP reason)
 js/main.js          boot sequence, canvases, theme toggle, scroll behavior
 assets/
   favicon.svg       browser tab icon
-  og-card.png       social share preview (1200x630)
+  og-card.html      source for the social card (edit this)
+  og-card.png       social share preview (1200x630, generated)
+scripts/build-og.ps1  re-exports og-card.png from og-card.html
 .nojekyll           tells Pages to serve files as-is
 ```
 
-No build step, no dependencies, no framework. Edit a file, commit, push, and it's live.
+No build step, no dependencies, no framework for the site itself. Edit a file, commit, push,
+and it's live. The one generated artifact is `assets/og-card.png` — see
+[Regenerating the social card](#regenerating-the-social-card).
 
 ---
 
@@ -181,7 +185,29 @@ delights once rather than becoming a toll booth.
 
 ## Regenerating the social card
 
-`assets/og-card.png` is what shows when the link is shared on social media. To change it,
-edit the image in any editor or replace the file, but keep it 1200x630 and keep the filename,
-since the meta tags point at it. It uses the light palette in both themes, which is
-intentional: it needs to read well on the white background of a chat or social feed.
+`assets/og-card.png` is what shows when the link is shared on social media. **Do not hand-edit
+the PNG.** It is generated from `assets/og-card.html`:
+
+```powershell
+pwsh -File scripts\build-og.ps1
+```
+
+Edit the HTML, re-run the script, done. The script finds Chrome on its own, verifies the file
+was actually written, and fails loudly if the output is not exactly 1200x630.
+
+The card duplicates claims that also live in `index.html`'s meta tags: job title, credentials,
+years of experience, and the site URL. **When you change those meta tags, rebuild this image**
+— it is the single most-seen surface on the site, and it is easy to forget precisely because
+the text is baked into pixels where grep cannot find it.
+
+It uses the light palette in both themes, which is intentional: it needs to read well on the
+white background of a chat or social feed. Its colors are copied from the `:root` tokens in
+`css/style.css`; if you retheme the site, update them here too.
+
+> **Caches:** Facebook, LinkedIn, and Slack cache OG images for a long time and key that cache
+> on the URL, so they keep serving the old image after you deploy. The `og:image` and
+> `twitter:image` tags therefore carry a version string — currently `og-card.png?v=2`.
+> **Bump that number whenever you regenerate the image**, in both tags. The file on disk keeps
+> its plain name; only the cache key changes. You can also force a re-scrape with
+> [Facebook's Sharing Debugger](https://developers.facebook.com/tools/debug/) or
+> [LinkedIn's Post Inspector](https://www.linkedin.com/post-inspector/).

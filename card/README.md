@@ -63,20 +63,32 @@ To change the QR target, edit the `target` variable in the script block at the b
 
 ### Regenerating the print files
 
-The exports are produced by headless Chrome. From the repo root:
+The exports are produced by headless Chrome. **Output paths must be absolute.** Given a
+relative path, Chrome fails to write the file, prints its error only to stderr, and still
+exits 0 — so a run that regenerated nothing looks exactly like a successful one.
 
 ```powershell
+$chrome = "C:\Program Files\Google\Chrome\Application\chrome.exe"
+$dir    = "C:\Users\geneg\Geniesolos\Geniesolos\card"
+$src    = "file:///c:/Users/geneg/Geniesolos/Geniesolos/card/index.html"
+
 # PDF
-& "C:\Program Files\Google\Chrome\Application\chrome.exe" --headless=new --disable-gpu `
-  --no-pdf-header-footer --print-to-pdf="card\geniesolos-business-card.pdf" `
-  "file:///c:/Users/geneg/Geniesolos/Geniesolos/card/index.html"
+& $chrome --headless=new --disable-gpu `
+  --no-pdf-header-footer --print-to-pdf="$dir\geniesolos-business-card.pdf" $src
 
 # PNG, one face at a time (3.125 scale on a 360x216 window lands exactly on 300 DPI)
-& "C:\Program Files\Google\Chrome\Application\chrome.exe" --headless=new --disable-gpu `
+& $chrome --headless=new --disable-gpu `
   --force-device-scale-factor=3.125 --window-size=360,216 `
-  --screenshot="card\card-front-300dpi.png" `
-  "file:///c:/Users/geneg/Geniesolos/Geniesolos/card/index.html#only=front"
+  --screenshot="$dir\card-front-300dpi.png" "$src#only=front"
+
+& $chrome --headless=new --disable-gpu `
+  --force-device-scale-factor=3.125 --window-size=360,216 `
+  --screenshot="$dir\card-back-300dpi.png" "$src#only=back"
 ```
+
+Chrome writes a `bytes written to file ...` line per export — check for three of them.
+A `registration_request.cc ... DEPRECATED_ENDPOINT` line is unrelated Chrome noise, not a
+failure. Confirm the PNGs come out 1125 × 675.
 
 `#only=front` / `#only=back` strips the page down to a single card face so the screenshot
 captures exactly the bleed area.
