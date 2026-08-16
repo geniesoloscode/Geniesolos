@@ -1,2 +1,6 @@
 scripts/.secrets/
 node_modules/
+
+# Subagent-driven-development scratch: ledgers, task briefs, review packages.
+# Working notes for a plan in flight, not part of the site or its history.
+.superpowers/
