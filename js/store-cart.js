@@ -18,18 +18,21 @@
      serving any more. CURRENT_TERMS_VERSION in api/checkout/index.mjs, the
      plate in terms.html and the archived copy under terms/ all carry the same
      string; tests/terms-version.test.mjs fails the build if they drift. */
-  var TERMS_VERSION = '2026-08';
+  var TERMS_VERSION = '2026-09';
   var TERMS_ERROR = 'Agree to the Service Terms before checking out.';
 
   /* monthly and once are integer cents. kind decides what a line needs in the
      cart beside it: 'addon' needs any plan, 'storefront-addon' needs one of
-     the two Storefront plans. */
+     the two Storefront plans. deposit, where present, is the part of `once`
+     invoiced at approval; the balance is always `once - deposit` so the two
+     halves cannot drift apart. Absent deposit means the whole one-time fee is
+     due at approval. */
   var CATALOG = {
     'lifeline':          { name: 'Lifeline',                  monthly: 29900, once: 0,      kind: 'base',             maxQty: 1 },
     'presence':          { name: 'Presence',                  monthly: 64900, once: 0,      kind: 'base',             maxQty: 1 },
     'transformation':    { name: 'Transformation',            monthly: 99900, once: 0,      kind: 'base',             maxQty: 1 },
     'storefront-zero':   { name: 'Storefront (zero-down)',    monthly: 49900, once: 0,      kind: 'storefront-base',  maxQty: 1 },
-    'storefront-build':  { name: 'Storefront (build + care)', monthly: 14900, once: 450000, kind: 'storefront-base',  maxQty: 1 },
+    'storefront-build':  { name: 'Storefront (build + care)', monthly: 14900, once: 450000, deposit: 225000, kind: 'storefront-base',  maxQty: 1 },
     'server-care':       { name: 'Server Care',               monthly: 22500, once: 0,      kind: 'addon',            maxQty: 20 },
     'db-care':           { name: 'Database Care',             monthly: 17500, once: 0,      kind: 'addon',            maxQty: 20 },
     'workspace-admin':   { name: 'Workspace Admin',           monthly: 19900, once: 0,      kind: 'storefront-addon', maxQty: 1 }
@@ -146,6 +149,7 @@
   function totals(items) {
     var monthly = 0;
     var once = 0;
+    var deposit = 0;
     var list = items || [];
 
     for (var i = 0; i < list.length; i++) {
@@ -154,8 +158,24 @@
       var qty = clampQty(list[i].key, list[i].qty);
       monthly += p.monthly * qty;
       once += p.once * qty;
+      /* No split means the whole one-time fee is the deposit, so callers
+         never have to ask which products are split. */
+      deposit += (typeof p.deposit === 'number' ? p.deposit : p.once) * qty;
     }
-    return { monthly: monthly, once: once };
+    return { monthly: monthly, once: once, deposit: deposit };
+  }
+
+  /* True when any line's one-time fee is split, which is what defers the
+     subscription: the monthly does not begin until the build is delivered,
+     and add-ons ride that same subscription, so one split line defers the
+     whole cart. */
+  function startsAfterBuild(items) {
+    var list = items || [];
+    for (var i = 0; i < list.length; i++) {
+      var p = product(list[i].key);
+      if (p && typeof p.deposit === 'number' && p.deposit < p.once) return true;
+    }
+    return false;
   }
 
   function fail(error) {
@@ -215,6 +235,7 @@
     remove: remove,
     setQty: setQty,
     totals: totals,
+    startsAfterBuild: startsAfterBuild,
     validate: validate
   };
 });

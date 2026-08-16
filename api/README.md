@@ -15,7 +15,7 @@ step: the deploy zips this single file.
 POST https://geniesolos.com/api/checkout
 { "items": [ { "key": "storefront-build", "qty": 1 }, { "key": "server-care", "qty": 3 } ],
   "phone": "+1 (240) 321-9004",
-  "termsAccepted": true, "termsVersion": "2026-08" }
+  "termsAccepted": true, "termsVersion": "2026-09" }
 
 200 { "url": "https://checkout.stripe.com/c/pay/cs_live_..." }
 400 { "error": "Pick one plan, not several." }        cart the customer can fix
@@ -90,7 +90,7 @@ no price is involved until the owner bills.
 | Variable | Value | Notes |
 |---|---|---|
 | `STRIPE_SECRET_KEY` | `sk_test_...` / `sk_live_...` | Travels only in the `Authorization` header. Never logged. |
-| `PRICE_MAP` | JSON `{ "key": ["price_id", ...] }` | One entry per catalog key. `storefront-build` has **two** IDs: **recurring first, one-time second**. Validated on every request so catalog drift fails loudly, but never sent to Stripe; these are the IDs the owner bills with in the dashboard. |
+| `PRICE_MAP` | JSON `{ "key": ["price_id", ...] }` | One entry per catalog key. `storefront-build` has **three** IDs, in fixed order: **recurring, deposit, balance**. Validated on every request so catalog drift fails loudly, but never sent to Stripe; these are the IDs the owner bills with in the dashboard (see "Approving an order"). |
 | `ALLOWED_ORIGIN` | `https://geniesolos.com` | Origin check. Requests with no `Origin` header pass, because the signed CloudFront origin access is the real gate. |
 
 Read on every invocation, not at cold start, so a console edit takes effect immediately.
@@ -171,6 +171,12 @@ it also compares the archived copy against `terms.html` word for word.
    edit to it, down to a comment, changes the hash.
 6. Run the tests. `tests/terms-version.test.mjs` is what tells you whether you missed a
    step; it prints the expected hash when that is the one you missed.
+7. Sweep this README for the old version string and update every live reference to it:
+   the example request body near the top of the file, the `metadata[terms_version]` row
+   in "Session parameters," and the "Proving the document is the right one" curl example
+   under "Approving an order" (both the URL and the printed hash). A grep for the old
+   version number, `grep -n "<old version>" api/README.md`, should turn up nothing but
+   genuine historical dates once this step is done.
 
 Never edit a file under `terms/`. Customers have already agreed to those words.
 
@@ -198,7 +204,7 @@ parameter below was verified against the real test-mode API on 2026-08-15.
 | `metadata[phone]` | the trimmed `phone` from the request, first 40 chars | The number the drawer collected, as the customer wrote it. The webhook email reads it from here. |
 | `setup_intent_data[metadata][order]` | same string as `metadata[order]` | Puts the order text on the SetupIntent itself, so the dashboard customer view shows it without opening the session. Verified against the real test-mode API on 2026-08-15. |
 | `setup_intent_data[metadata][phone]` | same string as `metadata[phone]` | The phone on the SetupIntent too, same reason. |
-| `metadata[terms_version]` | e.g. `2026-08` | Which document was agreed to. `terms/v2026-08.html` is that document. |
+| `metadata[terms_version]` | e.g. `2026-09` | Which document was agreed to. `terms/v2026-09.html` is that document. |
 | `metadata[terms_doc_sha256]` | 64 hex chars | SHA-256 of that document's exact bytes. Server side, from `TERMS_DOC_SHA256`. |
 | `metadata[terms_accepted_at]` | ISO 8601 UTC | Generated in the handler. Never read from the request body. |
 | `metadata[terms_accepted_ip]` | e.g. `198.51.100.7` | From `requestContext.http.sourceIp`, or `(unavailable)`. |
@@ -287,8 +293,8 @@ produce it, those two things together are what you send.
 equal the `terms_doc_sha256` on that customer's session:
 
 ```bash
-curl -s https://geniesolos.com/terms/v2026-08.html | sha256sum
-# 9fe0494dbbba9f098c4f1fda3d5800e531972450399b307515a4eb7ae126bec7
+curl -s https://geniesolos.com/terms/v2026-09.html | sha256sum
+# 2eee8290a0fa5989657982bc34dad4aba229f890f430825167cd28e35fc43a30
 ```
 
 Anyone can run that check against a copy you hand them, which is the point: it does not
@@ -301,9 +307,8 @@ subscription**:
 
 - Add one subscription line per order key, with the order's quantity, using the price IDs
   from `scripts/price-map.<mode>.json` (the same map the Lambda validated).
-- A `storefront-build` order also owes the one-time $4,500 build fee: while creating the
-  subscription, add it as a one-time invoice item using the one-time price (the second ID
-  under `storefront-build` in the map).
+- A `storefront-build` order is not a single subscription creation — see the milestone
+  section below.
 - Bill the saved card; it is the customer's only payment method, so make it the default.
 - The receipt comes from Stripe's customer emails (dashboard runbook item 3).
 
@@ -312,6 +317,85 @@ Payments applying to dashboard billing. Either disable Managed Payments for that
 subscription, or add eligible tax codes to all eight products. The Lambda is unaffected
 either way: in setup mode there is no payment, and the session already opts out because
 Managed Payments does not support `mode=setup` at all.
+
+### Storefront (build + care): two milestones, not one
+
+The $4,500 build fee is invoiced in halves and the subscription does not start
+until the build is delivered. `scripts/price-map.<mode>.json` lists
+`storefront-build`'s three price ids in fixed order: **recurring, deposit,
+balance**.
+
+Every call below was verified against the real test-mode API on 2026-08-16.
+Three parameters here are not optional and are not obvious — without them the
+sequence fails **silently**, finalizing an empty $0 invoice that reports
+`status: paid` while nothing is charged.
+
+**On approval — invoice the deposit and charge it. Do not create the subscription.**
+
+```
+# `pricing[price]`, NOT `price` — a bare `price` is rejected outright
+POST /v1/invoiceitems   customer=cus_x
+                        pricing[price]=<deposit, 2nd id>
+                        description=Storefront build - deposit (1 of 2)
+
+# without pending_invoice_items_behavior=include this comes out with no lines
+# and a $0 total, and still says "paid"
+POST /v1/invoices       customer=cus_x
+                        collection_method=charge_automatically
+                        pending_invoice_items_behavior=include
+
+# finalize only moves draft -> open. It does NOT charge.
+POST /v1/invoices/in_x/finalize
+
+# the step that actually moves money, and answers immediately
+POST /v1/invoices/in_x/pay   payment_method=<pm_id>
+```
+
+Confirm `status: paid`, `amount_paid: 225000`, `attempted: true` before
+starting the build. Still `open` with `amount_paid: 0` means it did not charge.
+
+**Why explicit `/pay` and not `auto_advance=true`:** `auto_advance` works, but
+schedules the attempt roughly an hour out with no interim signal — observed
+`next_payment_attempt` ~59 minutes ahead with `attempted: false` throughout.
+Right for automated billing, useless when you need to know now.
+
+`payment_method` is explicit because the customer may have no
+`invoice_settings[default_payment_method]` set. The bare call fails with an
+error naming exactly that; the same call with `payment_method` succeeds.
+
+**Before the subscription**, set the saved card as the customer default:
+
+```
+POST /v1/customers/cus_x  invoice_settings[default_payment_method]=<pm_id>
+```
+
+**On completion — invoice the balance, then create the subscription.** In that
+order: a subscription's first invoice sweeps in pending invoice items, so the
+client receives one invoice for $2,250 + $149 and the monthly cycle starts that
+day. Verified three times: exactly two lines, and a deposit already collected
+does not reappear.
+
+```
+POST /v1/invoiceitems   customer=cus_x
+                        pricing[price]=<balance, 3rd id>
+                        description=Storefront build - balance (2 of 2)
+
+POST /v1/subscriptions  customer=cus_x
+                        items[0][price]=<recurring, 1st id>
+```
+
+Nothing in the system tracks that a build is half-paid. Deposits without a
+matching balance are queryable because the two halves are distinct prices —
+that is the reason they are distinct.
+
+**The old $4,500 price is archived.** It exists from before the split and is no
+longer in the price map. Archiving keeps it out of the dashboard price picker,
+where choosing it would silently bill a client twice what is due. Archiving is
+not deletion — existing references keep resolving.
+
+```
+POST /v1/prices/<old_4500_id>  active=false
+```
 
 **3. Decline.** Email the customer from geniesolostech@gmail.com that the order was not
 accepted and nothing was charged (no email is automatic), then **delete the customer**,

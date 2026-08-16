@@ -3,10 +3,24 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Service Terms | GenieSolos Tech</title>
-<meta name="description" content="Service terms for GenieSolos Tech managed services: plans and pricing, response times, billing, cancellation and refunds, website ownership, and support scope.">
+<title>Service Terms v2026-09 (archived) | GenieSolos Tech</title>
+<meta name="description" content="Archived copy of the GenieSolos Tech service terms, version 2026-09, kept exactly as served so the consent recorded at checkout can be matched to the document it names.">
 <meta name="author" content="Gene Garland">
-<link rel="canonical" href="https://geniesolos.com/terms">
+
+<!-- THE ARCHIVE. This file is the immutable record of what version 2026-09 of
+     the service terms said, kept so a customer's consent record (captured at
+     checkout, see api/checkout/index.mjs) can be matched to the document they
+     actually agreed to. DO NOT EDIT the document body below. Correcting the
+     terms means cutting a NEW version: bump TERMS_VERSION in js/store-cart.js
+     and CURRENT_TERMS_VERSION in api/checkout/index.mjs, then copy terms.html
+     to terms/v<new>.html. tests/terms-version.test.mjs compares this body
+     against terms.html word for word and fails if the two ever part company.
+
+     /terms remains the current pointer; this URL is stable forever. -->
+<link rel="canonical" href="https://geniesolos.com/terms/v2026-09.html">
+<!-- Byte-for-byte a copy of /terms, so it must never compete with it in
+     search; it exists to be cited, not found. -->
+<meta name="robots" content="noindex, follow">
 <meta name="theme-color" content="#FAF5EC" id="themeColor">
 
 <!-- Applies the saved theme before first paint, same as the homepage, so a
@@ -32,13 +46,15 @@
 </script>
 
 <meta property="og:type" content="website">
-<meta property="og:title" content="Service Terms | GenieSolos Tech">
-<meta property="og:description" content="The terms that govern GenieSolos Tech managed services: plans, response times, billing, cancellation, and ownership.">
-<meta property="og:url" content="https://geniesolos.com/terms">
+<meta property="og:title" content="Service Terms v2026-09 (archived) | GenieSolos Tech">
+<meta property="og:description" content="Archived copy of version 2026-09 of the GenieSolos Tech service terms.">
+<meta property="og:url" content="https://geniesolos.com/terms/v2026-09.html">
 <meta property="og:image" content="https://geniesolos.com/assets/og-card.png">
 
-<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="assets/favicon.svg">
+<!-- Root-relative from here down: this page sits one directory deep, so a
+     bare "css/terms.css" would resolve to /terms/css/terms.css and 404. -->
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/favicon.svg">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -47,7 +63,7 @@
 <!-- The page's styles live in css/terms.css, NOT inline: CloudFront attaches
      a Content-Security-Policy with style-src 'self', which blocks inline
      <style> blocks entirely. Same ?v= cache-busting rule as the homepage. -->
-<link rel="stylesheet" href="css/terms.css?v=20260816">
+<link rel="stylesheet" href="/css/terms.css?v=20260816">
 </head>
 <body>
 
@@ -55,7 +71,7 @@
 
 <!-- ══════════ NAV ══════════ -->
 <header class="nav">
-  <a class="nav__brand" href="./">
+  <a class="nav__brand" href="/">
     <span class="nav__mark" aria-hidden="true">
       <svg viewBox="0 0 32 32" width="26" height="26"><path d="M16 2 29 9.5v15L16 32 3 24.5v-15Z" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M16 9v7l6 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="16" cy="16" r="1.9" fill="currentColor"/></svg>
     </span>
@@ -63,8 +79,8 @@
   </a>
 
   <div class="nav__end">
-    <a class="nav__back" href="./"><span>&larr; Back to site</span></a>
-    <a class="nav__back" href="store"><span>Store</span></a>
+    <a class="nav__back" href="/terms"><span>Current terms</span></a>
+    <a class="nav__back" href="/"><span>Back to site</span></a>
     <button class="themetog" id="themeToggle" type="button" role="switch" aria-checked="false"
             aria-label="Dark theme" title="Switch theme">
       <span class="themetog__thumb" aria-hidden="true">
@@ -81,6 +97,20 @@
     </button>
   </div>
 </header>
+
+<!-- ══════════ ARCHIVE NOTICE ══════════
+     Above the plate on purpose: the plate and everything below it is compared
+     against terms.html word for word by tests/terms-version.test.mjs, so
+     nothing may be added down there. This notice is the one thing the archive
+     says that the live page does not. -->
+<aside class="archived" role="note">
+  <p class="archived__tag">Archived version</p>
+  <p class="archived__text">
+    This is version <b>2026&#8209;09</b> of the service terms, kept exactly as it was served so
+    it can be matched to a consent record. It is not necessarily current.
+    <a href="/terms">Read the current service terms</a>.
+  </p>
+</aside>
 
 <!-- ══════════ DOCUMENT PLATE ══════════ -->
 <section class="plate">
@@ -737,17 +767,17 @@
 <footer class="foot">
   <div class="foot__inner">
     <p class="foot__sig">GENIESOLOS&nbsp;TECH</p>
-    <p class="foot__meta">Service Terms</p>
+    <p class="foot__meta">Service Terms &middot; archived version 2026&#8209;09</p>
     <p class="foot__contact">
       <a href="https://geniesolos.com">geniesolos.com</a> &nbsp;|&nbsp;
       <a href="mailto:geniesolostech@gmail.com">geniesolostech@gmail.com</a> &nbsp;|&nbsp;
       <a href="tel:+12403219004">240&#8209;321&#8209;9004</a>
     </p>
-    <p class="foot__home"><a href="./">&larr; Back to geniesolos.com</a></p>
+    <p class="foot__home"><a href="/">&larr; Back to geniesolos.com</a></p>
   </div>
 </footer>
 
-<script src="js/terms.js?v=20260814"></script>
+<script src="/js/terms.js?v=20260814"></script>
 
 </body>
 </html>

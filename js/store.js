@@ -117,8 +117,11 @@
   var linesEl    = $('#cartLines');
   var emptyEl    = $('#cartEmpty');
   var monthlyEl  = $('#totalMonthly');
-  var onceEl     = $('#totalOnce');
-  var onceRow    = $('#onceRow');
+  var monthlyLbl = $('#monthlyLabel');
+  var depositEl  = $('#totalDeposit');
+  var balanceEl  = $('#totalBalance');
+  var depositRow = $('#depositRow');
+  var balanceRow = $('#balanceRow');
   var errEl      = $('#cartError');
   var goBtn      = $('#checkoutBtn');
   var goLabel    = $('.drawer__go-label', goBtn);
@@ -289,7 +292,12 @@
 
     var bits = [];
     if (p.maxQty > 1) bits.push(money(p.monthly) + '/month each');
-    if (p.once) bits.push(money(p.once * item.qty) + ' one-time');
+    if (typeof p.deposit === 'number' && p.deposit < p.once) {
+      bits.push(money(p.deposit * item.qty) + ' deposit');
+      bits.push(money((p.once - p.deposit) * item.qty) + ' on completion');
+    } else if (p.once) {
+      bits.push(money(p.once * item.qty) + ' one-time');
+    }
     if (bits.length) {
       var meta = document.createElement('p');
       meta.className = 'line__meta';
@@ -334,9 +342,17 @@
     emptyEl.hidden = items.length > 0;
 
     var t = Cart.totals(items);
+    var balance = t.once - t.deposit;
     monthlyEl.textContent = money(t.monthly);
-    onceEl.textContent = money(t.once);
-    onceRow.hidden = t.once === 0;
+    depositEl.textContent = money(t.deposit);
+    balanceEl.textContent = money(balance);
+    depositRow.hidden = t.deposit === 0;
+    balanceRow.hidden = balance === 0;
+    /* Add-ons ride the build's subscription, so when a split line is present
+       the whole monthly figure starts at completion, not at approval. */
+    monthlyLbl.textContent = Cart.startsAfterBuild(items)
+      ? 'Monthly, after the build'
+      : 'Monthly, after approval';
 
     var count = items.length;
     badge.textContent = String(count);
@@ -345,10 +361,12 @@
       ? 'Cart, empty'
       : 'Cart, ' + count + (count === 1 ? ' item' : ' items'));
 
+    var when = Cart.startsAfterBuild(items) ? 'monthly after the build' : 'monthly after approval';
     live.textContent = count === 0
       ? 'Cart is empty.'
-      : 'Cart: ' + count + (count === 1 ? ' item, ' : ' items, ') + money(t.monthly) + ' monthly after approval' +
-        (t.once ? ', ' + money(t.once) + ' one-time after approval' : '') + '.';
+      : 'Cart: ' + count + (count === 1 ? ' item, ' : ' items, ') + money(t.monthly) + ' ' + when +
+        (t.deposit ? ', ' + money(t.deposit) + ' due at approval' : '') +
+        (balance ? ', ' + money(balance) + ' due on completion' : '') + '.';
 
     /* `busy` guards the button too: a storage event from another tab can
        re-render mid-checkout and must not resurrect a live Checkout. */
