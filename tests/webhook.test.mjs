@@ -36,6 +36,7 @@ const ev = (rawBody, extra = {}) => ({
    arrives. */
 const CONSENT = {
   terms_version: '2026-08',
+  terms_doc_sha256: '9fe0494dbbba9f098c4f1fda3d5800e531972450399b307515a4eb7ae126bec7',
   terms_accepted_at: '2026-08-16T14:32:05.123Z',
   terms_accepted_ip: '198.51.100.7',
   terms_user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/140.0',
@@ -266,4 +267,17 @@ test('a half-written consent record names what is missing rather than dropping t
   assert.match(message, /Terms accepted: v2026-08 on \(no timestamp\)/);
   assert.match(message, /IP \(no address\)/);
   assert.doesNotMatch(message, /undefined/);
+});
+
+test('the order email carries the document fingerprint', async () => {
+  await handler(ev(completed({ consent: CONSENT })));
+  /* Makes the email a self-contained copy of the record: version, when, from
+     where, and which exact bytes. */
+  assert.match(published[0].message, /Document: sha256 9fe0494dbbba9f098c4f1fda3d5800e531972450399b307515a4eb7ae126bec7/);
+});
+
+test('a consent record with no fingerprint still prints the rest', async () => {
+  await handler(ev(completed({ consent: { terms_version: '2026-08' } })));
+  assert.match(published[0].message, /Document: sha256 \(none recorded\)/);
+  assert.doesNotMatch(published[0].message, /undefined/);
 });

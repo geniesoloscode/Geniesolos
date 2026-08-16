@@ -48,6 +48,20 @@ const PHONE_MAX = 40;
    and tests/terms-version.test.mjs fails the build if any of them drift. */
 const CURRENT_TERMS_VERSION = '2026-08';
 
+/* SHA-256 of terms/v<CURRENT_TERMS_VERSION>.html, so the consent record
+   fingerprints the exact bytes of the document rather than only naming it.
+   Years from now the evidence then rests on arithmetic instead of on anyone
+   trusting this repository: a copy produced from the archive either hashes to
+   what Stripe recorded at the moment of consent, or it is not the document
+   that was agreed to.
+
+   Pinned here rather than computed, because this function ships as its own
+   zip and cannot read the archive at runtime. .gitattributes forces eol=lf,
+   so the same bytes hash the same on a Windows checkout, on the Linux CI
+   runner and in what CloudFront serves; tests/terms-version.test.mjs
+   recomputes it from the file on every run. */
+const TERMS_DOC_SHA256 = '9fe0494dbbba9f098c4f1fda3d5800e531972450399b307515a4eb7ae126bec7';
+
 const TERMS_ERROR = 'Agree to the Service Terms before checking out.';
 /* A ticked box naming a version we do not serve means the visitor was shown a
    page that is not the one live now, so the tick is real but the document
@@ -171,6 +185,7 @@ function consentRecord(event) {
   const ua = headerOf(event, 'user-agent');
   return {
     version: CURRENT_TERMS_VERSION,
+    docSha256: TERMS_DOC_SHA256,
     at: new Date().toISOString(),
     ip: typeof ip === 'string' && ip.length > 0 ? ip : IP_UNKNOWN,
     userAgent: typeof ua === 'string' && ua.length > 0 ? ua.slice(0, UA_MAX) : UA_UNKNOWN,
@@ -247,6 +262,7 @@ function buildParams(items, priceMap, phone, consent) {
   // dashboard, and none of them comes near the 500-character value cap.
   const record = {
     terms_version: consent.version,
+    terms_doc_sha256: consent.docSha256,
     terms_accepted_at: consent.at,
     terms_accepted_ip: consent.ip,
     terms_user_agent: consent.userAgent,

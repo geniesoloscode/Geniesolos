@@ -525,3 +525,21 @@ test('cart rules run before the phone, and the phone before consent', async () =
 
   assert.equal(lastCall, null);
 });
+
+test('the document fingerprint lands in both metadata params and is ours alone', async () => {
+  const res = await handler(ev({
+    items: [{ key: 'lifeline', qty: 1 }],
+    phone: PHONE, ...CONSENT,
+    /* The client has no say in this one either. */
+    termsDocSha256: 'f'.repeat(64),
+    terms_doc_sha256: 'f'.repeat(64),
+  }));
+  assert.equal(res.statusCode, 200);
+
+  const p = paramsOf(lastCall);
+  const hash = p.get('metadata[terms_doc_sha256]');
+  assert.match(hash, /^[0-9a-f]{64}$/);
+  assert.notEqual(hash, 'f'.repeat(64));
+  assert.equal(p.get('setup_intent_data[metadata][terms_doc_sha256]'), hash);
+  assert.doesNotMatch(lastCall.opts.body, /ffffffffff/);
+});

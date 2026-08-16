@@ -1088,6 +1088,12 @@ html { scrollbar-color: var(--violet-bright) var(--cream-2); }
   cursor: pointer;
 }
 .drawer__consent-box:focus-visible { outline: 3px solid var(--violet); outline-offset: 2px; }
+/* Locked until the terms have been opened. Dimmed rather than hidden, so the
+   box is visibly the next step once the hint under it has been dealt with,
+   and the label stops offering a click that would do nothing. */
+.drawer__consent-box:disabled { opacity: .45; cursor: not-allowed; }
+.drawer__consent.is-locked .drawer__consent-label { cursor: default; }
+.drawer__consent.is-locked .drawer__consent-ver { color: var(--amber-deep); }
 /* The same red the phone field wears when the drawer is complaining. */
 .drawer__consent-box[aria-invalid="true"] {
   outline: 2px solid #B3261E;

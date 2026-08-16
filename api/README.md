@@ -21,6 +21,7 @@ POST https://geniesolos.com/api/checkout
 400 { "error": "Pick one plan, not several." }        cart the customer can fix
 400 { "error": "Add a phone number so I can reach you before billing starts." }
 400 { "error": "Agree to the Service Terms before checking out." }
+       (the drawer also refuses locally, before this, until the terms link is opened)
 400 { "error": "Your page is out of date. Reload the store ..." }   stale terms version
 403 { "error": "Checkout only answers requests from https://geniesolos.com." }
 405 { "error": "Use POST to start checkout." }
@@ -134,9 +135,21 @@ handler observes everything else.
 |---|---|---|
 | `termsAccepted` | client | Must be boolean `true`. `'true'`, `1` and `'on'` are refused: a checkbox hands over a real boolean, so anything else came from storage, an attribute, or a hand-built body. |
 | `termsVersion` | client | Must equal `CURRENT_TERMS_VERSION`. A mismatch is a 400, never a silent accept, because it means the visitor was shown a page that is not the one live now. |
+| document hash | **handler** | `TERMS_DOC_SHA256`, the SHA-256 of `terms/v<version>.html`. See below. |
 | timestamp | **handler** | `new Date().toISOString()`. A client-supplied one is ignored, not echoed. |
 | IP | **handler** | `event.requestContext.http.sourceIp`, or `(unavailable)` when absent. |
 | user agent | **handler** | Request header, truncated to 500 chars, or `(none sent)`. Truncated rather than refused: a clipped agent is still useful and the visitor cannot change their browser's header. |
+
+**Why the hash.** Naming a version only helps if everyone agrees what that version said, which is a claim about this repository. The fingerprint removes that dependency: a copy of the document produced years later either hashes to what Stripe recorded at the moment of consent or it is not the document that was agreed to. It is derived server side from a constant, never sent by the browser, so it sits with the timestamp and the IP among the fields the customer had no hand in.
+
+The constant is pinned rather than computed because this function ships as its own zip and cannot read the archive at runtime. `.gitattributes` sets `* text=auto eol=lf`, so the bytes are identical on a Windows checkout, on the Linux CI runner and in what CloudFront serves — verified against the live URL. `tests/terms-version.test.mjs` recomputes the hash from the file on every run.
+
+**The drawer also gates the box on the link.** The checkbox ships `disabled` in `store.html` and `js/store.js` enables it only once the Service Terms link has been opened, so nobody can agree to a document that was never put in front of them. Two things follow:
+
+- **Nothing about the gate is sent here, and nothing is recorded.** The server cannot verify that a link was opened, and a field it cannot check would be the only soft claim in a record whose whole value is that every other field is either observed or validated. Worse, recording it would mean writing down a `false` for every customer who did not open it — evidence against ourselves, produced at scale. What the gate leaves behind is the page itself, which is in git and deployed from it.
+- **It is a client-side affordance, not a security control.** A hand-built request bypasses it, exactly as it bypasses the drawer entirely. The server-side story is unchanged: `termsAccepted === true` and a known `termsVersion`.
+
+A locked box refuses checkout with its own wording, *"Open the Service Terms first, then tick the box to agree."*, which has no counterpart here because it never reaches the server. Opening the terms from the context menu fires no click event, so the gate stays shut; that is why the refusal says what to do rather than leaving a dead end.
 
 **One version string, four places.** `TERMS_VERSION` in `js/store-cart.js` is where the
 browser reads it. `CURRENT_TERMS_VERSION` here is the copy this function ships with.
@@ -153,8 +166,11 @@ it also compares the archived copy against `terms.html` word for word.
 4. `cp terms.html terms/v<new>.html`, then in the copy: make the asset paths
    root-relative, set the canonical and the archive notice to the new version, and keep
    `noindex`.
-5. Run the tests. `tests/terms-version.test.mjs` is what tells you whether you missed a
-   step.
+5. Update `TERMS_DOC_SHA256` here to the hash of the file you just cut:
+   `sha256sum terms/v<new>.html`. Do this **last**, after the copy is final — any later
+   edit to it, down to a comment, changes the hash.
+6. Run the tests. `tests/terms-version.test.mjs` is what tells you whether you missed a
+   step; it prints the expected hash when that is the one you missed.
 
 Never edit a file under `terms/`. Customers have already agreed to those words.
 
@@ -183,14 +199,15 @@ parameter below was verified against the real test-mode API on 2026-08-15.
 | `setup_intent_data[metadata][order]` | same string as `metadata[order]` | Puts the order text on the SetupIntent itself, so the dashboard customer view shows it without opening the session. Verified against the real test-mode API on 2026-08-15. |
 | `setup_intent_data[metadata][phone]` | same string as `metadata[phone]` | The phone on the SetupIntent too, same reason. |
 | `metadata[terms_version]` | e.g. `2026-08` | Which document was agreed to. `terms/v2026-08.html` is that document. |
+| `metadata[terms_doc_sha256]` | 64 hex chars | SHA-256 of that document's exact bytes. Server side, from `TERMS_DOC_SHA256`. |
 | `metadata[terms_accepted_at]` | ISO 8601 UTC | Generated in the handler. Never read from the request body. |
 | `metadata[terms_accepted_ip]` | e.g. `198.51.100.7` | From `requestContext.http.sourceIp`, or `(unavailable)`. |
 | `metadata[terms_user_agent]` | request header, first 500 chars | Or `(none sent)`. |
 | `setup_intent_data[metadata][terms_*]` | same four values | Written in the same pass as the session copy, so the two cannot drift. |
 
-Seven metadata keys on the session and six on the SetupIntent, well inside Stripe's
+Eight metadata keys on the session and seven on the SetupIntent, well inside Stripe's
 limit of 50 per object, and every value inside the 500-character cap. The consent
-record is four separate keys rather than one packed JSON blob so each reads on its own
+record is five separate keys rather than one packed JSON blob so each reads on its own
 in the dashboard.
 
 The Stripe call is form encoded, over `fetch`, with a 10 second `AbortSignal.timeout`.
@@ -261,10 +278,21 @@ customer page under **Payment methods**. The order is in the Checkout Session's 
 or from the CLI: `stripe checkout sessions list --limit 5`.
 
 The same metadata carries the consent record: `metadata[terms_version]`,
-`terms_accepted_at`, `terms_accepted_ip` and `terms_user_agent`. The order email repeats
-all four. That record plus `terms/v<version>.html` is the whole agreement for a
-month-to-month client who never signed an MSA, so if you ever have to produce it, those
-two things together are what you send. A completed session with no consent fields
+`terms_doc_sha256`, `terms_accepted_at`, `terms_accepted_ip` and `terms_user_agent`. The
+order email repeats all five. That record plus `terms/v<version>.html` is the whole
+agreement for a month-to-month client who never signed an MSA, so if you ever have to
+produce it, those two things together are what you send.
+
+**Proving the document is the right one.** Download the archive and hash it; it must
+equal the `terms_doc_sha256` on that customer's session:
+
+```bash
+curl -s https://geniesolos.com/terms/v2026-08.html | sha256sum
+# 9fe0494dbbba9f098c4f1fda3d5800e531972450399b307515a4eb7ae126bec7
+```
+
+Anyone can run that check against a copy you hand them, which is the point: it does not
+require trusting you, this repository, or the archive still being online. A completed session with no consent fields
 predates this feature (the email says `Terms accepted: (no record)`); that customer
 agreed to nothing in writing and should be asked to before service continues.
 

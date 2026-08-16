@@ -15,6 +15,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 
@@ -82,4 +83,17 @@ test('the archive is published: both deploy paths carry the terms/ prefix', () =
      the repo and nowhere else. */
   assert.match(read('scripts/deploy.ps1'), /'--include', 'terms\/\*'/);
   assert.match(read('.github/workflows/deploy.yml'), /--include "terms\/\*"/);
+});
+
+test('the Lambda carries the hash of the archived document, byte for byte', () => {
+  /* The consent record fingerprints the exact bytes of the document, so the
+     evidence does not rest on anyone trusting this repository years from now:
+     a downloaded copy either hashes to what Stripe recorded or it does not.
+     .gitattributes forces eol=lf, so this hash is the same on a Windows
+     checkout, on the Linux CI runner and in the bytes CloudFront serves. */
+  const actual = createHash('sha256').update(readFileSync(root + ARCHIVE)).digest('hex');
+  const pinned = /const TERMS_DOC_SHA256 = '([^']+)'/.exec(read('api/checkout/index.mjs'));
+  assert.ok(pinned, 'TERMS_DOC_SHA256 is missing from api/checkout/index.mjs');
+  assert.equal(pinned[1], actual);
+  assert.match(pinned[1], /^[0-9a-f]{64}$/);
 });

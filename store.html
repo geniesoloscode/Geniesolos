@@ -51,7 +51,7 @@
 <!-- The page's styles live in css/store.css, NOT inline: CloudFront attaches
      a Content-Security-Policy with style-src 'self', which blocks inline
      <style> blocks entirely. Same ?v= cache-busting rule as the homepage. -->
-<link rel="stylesheet" href="css/store.css?v=20260816">
+<link rel="stylesheet" href="css/store.css?v=20260816b">
 </head>
 <body>
 
@@ -519,12 +519,18 @@
            version in from GSCart.TERMS_VERSION so the string is written down
            once, and blocks Checkout until the box is ticked; the Lambda
            revalidates it and stamps the time and the IP itself. -->
-      <div class="drawer__consent">
+      <!-- The box ships disabled and js/store.js enables it once the Service
+           Terms link has been opened, so agreeing is never something you can
+           do without the document having been put in front of you. Disabled
+           in the markup rather than by script: if store.js never runs, the
+           safe state is the locked one. The hint under the label always says
+           why, the same rule the plan cards follow. -->
+      <div class="drawer__consent is-locked">
         <input class="drawer__consent-box" id="termsAccept" type="checkbox"
-               aria-describedby="termsVersion">
+               disabled aria-describedby="termsVersion">
         <label class="drawer__consent-label" for="termsAccept">I have read and agree to the
-          GenieSolos <a href="terms" target="_blank" rel="noopener">Service Terms</a>.</label>
-        <p class="drawer__consent-ver" id="termsVersion"></p>
+          GenieSolos <a href="terms" id="termsLink" target="_blank" rel="noopener">Service Terms</a>.</label>
+        <p class="drawer__consent-ver" id="termsVersion" aria-live="polite"></p>
       </div>
 
       <button class="btn btn--solid drawer__go" id="checkoutBtn" type="button">
@@ -536,7 +542,7 @@
 </div>
 
 <script src="js/store-cart.js?v=20260816"></script>
-<script src="js/store.js?v=20260816"></script>
+<script src="js/store.js?v=20260816b"></script>
 
 </body>
 </html>

@@ -157,6 +157,11 @@ function consentLines(metadata) {
     `Terms accepted: v${metadata.terms_version} on ${field(metadata.terms_accepted_at, '(no timestamp)')}`,
     `  IP ${field(metadata.terms_accepted_ip, '(no address)')}`,
     `  ${field(metadata.terms_user_agent, '(no user agent)')}`,
+    /* The fingerprint of the exact bytes agreed to, so this email is a
+       self-contained copy of the record: which document, when, from where.
+       A copy of terms/v<version>.html either hashes to this or it is not
+       what was agreed to. */
+    `  Document: sha256 ${field(metadata.terms_doc_sha256, '(none recorded)')}`,
   ];
 }
 
