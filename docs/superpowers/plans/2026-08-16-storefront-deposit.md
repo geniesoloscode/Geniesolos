@@ -929,9 +929,13 @@ git commit -m "Give Storefront a deposit price and a balance price, told apart b
 - [ ] **Step 1: Rewrite the approval step for Storefront**
 
 In `api/README.md`, replace the `storefront-build` bullet under "**2. Approve:
-create the subscription by hand**" with a milestone section. Use whatever Task 1
-actually proved — if the pending invoice item did **not** merge onto the
-subscription's first invoice, describe two separate invoices here instead.
+create the subscription by hand**" with the milestone section below.
+
+**This text was rewritten after Task 1.** The original draft described a
+sequence that was proven to fail — and to fail *silently*, producing a $0
+invoice that reports `status: paid`. Reproduce the block below verbatim; do not
+"simplify" any of the three non-obvious parameters back out of it. Spec §6
+carries the same text and the reasoning behind each one.
 
 ````markdown
 ### Storefront (build + care): two milestones, not one
@@ -941,24 +945,63 @@ until the build is delivered. `scripts/price-map.<mode>.json` lists
 `storefront-build`'s three price ids in fixed order: **recurring, deposit,
 balance**.
 
-**On approval — invoice the deposit only. Do not create the subscription.**
+Every call below was verified against the real test-mode API on 2026-08-16.
+Three parameters here are not optional and are not obvious — without them the
+sequence fails **silently**, finalizing an empty $0 invoice that reports
+`status: paid` while nothing is charged.
+
+**On approval — invoice the deposit and charge it. Do not create the subscription.**
 
 ```
-POST /v1/invoiceitems  customer=cus_x price=<deposit, 2nd id>
-                       description="Storefront build — deposit (1 of 2)"
-POST /v1/invoices      customer=cus_x collection_method=charge_automatically
+# `pricing[price]`, NOT `price` — a bare `price` is rejected outright
+POST /v1/invoiceitems   customer=cus_x
+                        pricing[price]=<deposit, 2nd id>
+                        description=Storefront build - deposit (1 of 2)
+
+# without pending_invoice_items_behavior=include this comes out with no lines
+# and a $0 total, and still says "paid"
+POST /v1/invoices       customer=cus_x
+                        collection_method=charge_automatically
+                        pending_invoice_items_behavior=include
+
+# finalize only moves draft -> open. It does NOT charge.
 POST /v1/invoices/in_x/finalize
+
+# the step that actually moves money, and answers immediately
+POST /v1/invoices/in_x/pay   payment_method=<pm_id>
+```
+
+Confirm `status: paid`, `amount_paid: 225000`, `attempted: true` before
+starting the build. Still `open` with `amount_paid: 0` means it did not charge.
+
+**Why explicit `/pay` and not `auto_advance=true`:** `auto_advance` works, but
+schedules the attempt roughly an hour out with no interim signal — observed
+`next_payment_attempt` ~59 minutes ahead with `attempted: false` throughout.
+Right for automated billing, useless when you need to know now.
+
+`payment_method` is explicit because the customer may have no
+`invoice_settings[default_payment_method]` set. The bare call fails with an
+error naming exactly that; the same call with `payment_method` succeeds.
+
+**Before the subscription**, set the saved card as the customer default:
+
+```
+POST /v1/customers/cus_x  invoice_settings[default_payment_method]=<pm_id>
 ```
 
 **On completion — invoice the balance, then create the subscription.** In that
-order: Stripe pulls pending invoice items onto a subscription's first invoice,
-so the client receives one invoice for $2,250 + $149 and the monthly cycle
-starts that day.
+order: a subscription's first invoice sweeps in pending invoice items, so the
+client receives one invoice for $2,250 + $149 and the monthly cycle starts that
+day. Verified three times: exactly two lines, and a deposit already collected
+does not reappear.
 
 ```
-POST /v1/invoiceitems   customer=cus_x price=<balance, 3rd id>
-                        description="Storefront build — balance (2 of 2)"
-POST /v1/subscriptions  customer=cus_x items[0][price]=<recurring, 1st id>
+POST /v1/invoiceitems   customer=cus_x
+                        pricing[price]=<balance, 3rd id>
+                        description=Storefront build - balance (2 of 2)
+
+POST /v1/subscriptions  customer=cus_x
+                        items[0][price]=<recurring, 1st id>
 ```
 
 Nothing in the system tracks that a build is half-paid. Deposits without a

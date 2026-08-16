@@ -212,25 +212,75 @@ the runbook rather than automated, since it happens once.
 
 ## 6. Runbook — `api/README.md`
 
-"Approving an order" splits into two milestones for this plan:
+> **Rewritten 2026-08-16 from Task 1's proven results.** The original draft of
+> this section is preserved in the findings sections below, because what was
+> wrong with it is worth keeping: it did not merely fail, it failed **silently**
+> — the approval invoice finalized with no lines and a $0 total while reporting
+> `status: paid`. A human following it would have believed the deposit was
+> collected, started the build, and only discovered at completion that the
+> customer had been charged deposit + balance + first month in one automatic
+> collection. Three separate defects stacked to produce that, and only one was
+> guessable from documentation. Every call below was observed succeeding live.
 
-**On approval** — invoice the deposit, and **do not create the subscription**:
+"Approving an order" splits into two milestones for this plan.
+
+**On approval** — invoice the deposit **and charge it**, and do not create the
+subscription. Three of these parameters are not optional and not obvious; the
+sequence without them fails silently:
 
 ```
-POST /v1/invoiceitems  customer=cus_x price=<deposit_2250>
-                       description="Storefront build — deposit (1 of 2)"
-POST /v1/invoices      customer=cus_x collection_method=charge_automatically
+# `pricing[price]`, NOT `price` — a bare `price` is rejected outright
+POST /v1/invoiceitems   customer=cus_x
+                        pricing[price]=<deposit, 2nd id>
+                        description=Storefront build - deposit (1 of 2)
+
+# without pending_invoice_items_behavior=include this invoice comes out with
+# no lines and a $0 total, and still reports "paid"
+POST /v1/invoices       customer=cus_x
+                        collection_method=charge_automatically
+                        pending_invoice_items_behavior=include
+
+# finalize only moves draft -> open. It does NOT charge.
 POST /v1/invoices/in_x/finalize
+
+# the step that actually moves money, and answers immediately
+POST /v1/invoices/in_x/pay   payment_method=<pm_id>
 ```
 
-**On completion** — invoice the balance, then create the subscription. Stripe
-pulls pending invoice items onto a subscription's first invoice, so the client
-receives one invoice for $2,250 + $149 and the monthly cycle starts that day:
+Confirm `status: paid`, `amount_paid: 225000`, `attempted: true` before
+starting the build. Still `open` with `amount_paid: 0` means it did not charge.
+
+**Why explicit `/pay` rather than `auto_advance=true`:** `auto_advance` works,
+but schedules the attempt roughly an hour out with no interim signal — observed
+`next_payment_attempt` ~59 minutes ahead, `attempted: false` throughout. Right
+for automated billing, useless for a runbook step a human needs an answer from.
+
+`payment_method` is passed explicitly because the customer may have no
+`invoice_settings[default_payment_method]`. Verified: the bare call fails with
+a precise error naming the missing default; the same call with `payment_method`
+succeeds.
+
+**Before the subscription**, set the saved card as the customer default so the
+subscription has something to bill. *(Recommended, not isolated — Task 1 always
+set this before the subscription step, so it never tested the alternative.)*
 
 ```
-POST /v1/invoiceitems   customer=cus_x price=<balance_2250>
-                        description="Storefront build — balance (2 of 2)"
-POST /v1/subscriptions  customer=cus_x items[0][price]=<recurring_149>
+POST /v1/customers/cus_x  invoice_settings[default_payment_method]=<pm_id>
+```
+
+**On completion** — invoice the balance, then create the subscription, in that
+order. A subscription's first invoice sweeps in pending invoice items, so the
+client receives one invoice for $2,250 + $149 and the monthly cycle starts that
+day. Verified three times: exactly two lines, and a deposit already collected
+at approval does **not** reappear.
+
+```
+POST /v1/invoiceitems   customer=cus_x
+                        pricing[price]=<balance, 3rd id>
+                        description=Storefront build - balance (2 of 2)
+
+POST /v1/subscriptions  customer=cus_x
+                        items[0][price]=<recurring, 1st id>
 ```
 
 The existing sentence "the second ID under `storefront-build` in the map" is
