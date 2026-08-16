@@ -21,7 +21,6 @@ POST https://geniesolos.com/api/checkout
 400 { "error": "Pick one plan, not several." }        cart the customer can fix
 400 { "error": "Add a phone number so I can reach you before billing starts." }
 400 { "error": "Agree to the Service Terms before checking out." }
-       (the drawer also refuses locally, before this, until the terms link is opened)
 400 { "error": "Your page is out of date. Reload the store ..." }   stale terms version
 403 { "error": "Checkout only answers requests from https://geniesolos.com." }
 405 { "error": "Use POST to start checkout." }
@@ -144,12 +143,13 @@ handler observes everything else.
 
 The constant is pinned rather than computed because this function ships as its own zip and cannot read the archive at runtime. `.gitattributes` sets `* text=auto eol=lf`, so the bytes are identical on a Windows checkout, on the Linux CI runner and in what CloudFront serves — verified against the live URL. `tests/terms-version.test.mjs` recomputes the hash from the file on every run.
 
-**The drawer also gates the box on the link.** The checkbox ships `disabled` in `store.html` and `js/store.js` enables it only once the Service Terms link has been opened, so nobody can agree to a document that was never put in front of them. Two things follow:
+**What is deliberately not recorded.** Nothing tracks whether the customer opened the Service Terms link, and the box is not gated on opening it. Both were built and then removed on 2026-08-16, for reasons worth keeping written down:
 
-- **Nothing about the gate is sent here, and nothing is recorded.** The server cannot verify that a link was opened, and a field it cannot check would be the only soft claim in a record whose whole value is that every other field is either observed or validated. Worse, recording it would mean writing down a `false` for every customer who did not open it — evidence against ourselves, produced at scale. What the gate leaves behind is the page itself, which is in git and deployed from it.
-- **It is a client-side affordance, not a security control.** A hand-built request bypasses it, exactly as it bypasses the drawer entirely. The server-side story is unchanged: `termsAccepted === true` and a known `termsVersion`.
+- The server cannot verify that a link was opened, so the field would be the only soft claim in a record whose whole value is that every other field is either observed here or validated here.
+- Recording it means writing down a `false` for every customer who did not open it. Most do not. That is adverse evidence about our own customers, produced at scale, sitting in the same metadata we would produce to defend a charge.
+- The standard for clickwrap is conspicuous notice plus a deliberate affirmative act, not proof of reading. The label sits directly above the Checkout button and the version is beside it, which is the part that carries weight.
 
-A locked box refuses checkout with its own wording, *"Open the Service Terms first, then tick the box to agree."*, which has no counterpart here because it never reaches the server. Opening the terms from the context menu fires no click event, so the gate stays shut; that is why the refusal says what to do rather than leaving a dead end.
+Every plan is also reviewed and signed as a contract after approval, so the clickwrap is the record for the gap between checkout and signature, not the whole agreement.
 
 **One version string, four places.** `TERMS_VERSION` in `js/store-cart.js` is where the
 browser reads it. `CURRENT_TERMS_VERSION` here is the copy this function ships with.

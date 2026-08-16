@@ -125,8 +125,6 @@
   var phoneEl    = $('#phoneInput');
   var termsEl    = $('#termsAccept');
   var termsVerEl = $('#termsVersion');
-  var termsLink  = $('#termsLink');
-  var consentEl  = termsEl ? termsEl.parentNode : null;
 
   /* ── storage ─────────────────────────────────────────────── */
   function load() {
@@ -654,60 +652,15 @@
      Never persisted, unlike the phone. A ticked box restored from storage,
      from a bfcache restore, or from a browser's own form-state recovery would
      be a record of a decision nobody made this time, so consent starts over
-     on every load.
-
-     The box is also gated on the terms having been opened: it stays disabled
-     until the link is used, so nobody can agree to a document that was never
-     put in front of them. Nothing about the gate is sent to the Lambda and
-     nothing about it is recorded. It cannot be: only this page can see it,
-     and every other field in the consent record is either observed by the
-     server or checked by it. What the gate leaves behind is the page itself,
-     which is in git and deployed from it, so what a customer had to do to
-     reach Checkout on any given day is a matter of record. */
-  var termsOpened = false;
-
-  /* Client-only, with no counterpart in the Lambda: the server cannot tell
-     whether a link was opened, so this message never travels. It exists so a
-     disabled box is never the only thing standing between someone and an
-     explanation, the same rule the plan cards follow. */
-  var TERMS_GATE_ERR = 'Open the Service Terms first, then tick the box to agree.';
-
-  function syncConsent() {
-    if (!termsEl) return;
-    termsEl.disabled = !termsOpened;
-    if (consentEl) consentEl.classList.toggle('is-locked', !termsOpened);
-    if (termsVerEl) {
-      termsVerEl.textContent = termsOpened
-        ? 'Version ' + Cart.TERMS_VERSION
-        : 'Version ' + Cart.TERMS_VERSION + ' · open the terms to tick this';
-    }
-  }
-
+     on every load. */
   function resetConsent() {
-    termsOpened = false;
     if (termsEl) {
       termsEl.checked = false;
       termsEl.removeAttribute('aria-invalid');
     }
-    syncConsent();
   }
 
-  if (termsLink) {
-    /* `click` covers a left click and a keyboard Enter; `auxclick` covers the
-       middle click that opens a background tab. Opening from the context menu
-       fires neither, which is why refusing checkout says what to do rather
-       than leaving a dead end. */
-    var openedTerms = function () {
-      if (termsOpened) return;
-      termsOpened = true;
-      syncConsent();
-      hideError();                       /* the gate was the complaint */
-    };
-    termsLink.addEventListener('click', openedTerms);
-    termsLink.addEventListener('auxclick', function (e) {
-      if (e.button === 1) openedTerms();
-    });
-  }
+  if (termsVerEl) termsVerEl.textContent = 'Version ' + Cart.TERMS_VERSION;
 
   if (termsEl) {
     termsEl.addEventListener('change', function () {
@@ -775,15 +728,6 @@
         phoneEl.focus();
       }
       showError(PHONE_ERR);
-      return;
-    }
-
-    /* The gate before the tick: while the box is still locked, telling
-       someone to tick it would be telling them to do something the page will
-       not let them do. */
-    if (!termsOpened) {
-      if (termsLink) termsLink.focus();
-      showError(TERMS_GATE_ERR);
       return;
     }
 
