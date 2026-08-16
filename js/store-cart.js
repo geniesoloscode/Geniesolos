@@ -18,7 +18,7 @@
      serving any more. CURRENT_TERMS_VERSION in api/checkout/index.mjs, the
      plate in terms.html and the archived copy under terms/ all carry the same
      string; tests/terms-version.test.mjs fails the build if they drift. */
-  var TERMS_VERSION = '2026-09';
+  var TERMS_VERSION = '2026-10';
   var TERMS_ERROR = 'Agree to the Service Terms before checking out.';
 
   /* monthly and once are integer cents. kind decides what a line needs in the

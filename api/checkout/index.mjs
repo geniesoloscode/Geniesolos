@@ -46,7 +46,7 @@ const PHONE_MAX = 40;
    with no bundler and no shared module, the same reason CATALOG is duplicated
    below. terms/v2026-08.html is the immutable copy of what that string names,
    and tests/terms-version.test.mjs fails the build if any of them drift. */
-const CURRENT_TERMS_VERSION = '2026-09';
+const CURRENT_TERMS_VERSION = '2026-10';
 
 /* SHA-256 of terms/v<CURRENT_TERMS_VERSION>.html, so the consent record
    fingerprints the exact bytes of the document rather than only naming it.
@@ -60,7 +60,7 @@ const CURRENT_TERMS_VERSION = '2026-09';
    so the same bytes hash the same on a Windows checkout, on the Linux CI
    runner and in what CloudFront serves; tests/terms-version.test.mjs
    recomputes it from the file on every run. */
-const TERMS_DOC_SHA256 = 'efe9f87081f577e6d6b430d3a8c00927603984295505f568a2b0cea10bff6423';
+const TERMS_DOC_SHA256 = '1baa89f91c02cdb268604aaf15df1c64a4838cb5b860cdab73b341642eb5537d';
 
 const TERMS_ERROR = 'Agree to the Service Terms before checking out.';
 /* A ticked box naming a version we do not serve means the visitor was shown a

@@ -195,7 +195,7 @@ test('every validation failure carries a readable message', () => {
    all have to match it (tests/terms-version.test.mjs). */
 
 test('the terms version is a bare identifier the whole system can share', () => {
-  assert.equal(GSCart.TERMS_VERSION, '2026-09');
+  assert.equal(GSCart.TERMS_VERSION, '2026-10');
 });
 
 test('an unticked box blocks checkout, and only a real boolean true clears it', () => {

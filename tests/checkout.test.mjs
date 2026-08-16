@@ -32,7 +32,7 @@ const ev = (body, extra = {}) => rawEv(JSON.stringify(body), extra);
    the rest. That order gets its own test. */
 const PHONE = '+1 (240) 321-9004';
 const PHONE_ERROR = 'Add a phone number so I can reach you before billing starts.';
-const TERMS_VERSION = '2026-09';
+const TERMS_VERSION = '2026-10';
 const TERMS_ERROR = 'Agree to the Service Terms before checking out.';
 const STALE_ERROR = 'Your page is out of date. Reload the store and agree to the current Service Terms.';
 const CONSENT = { termsAccepted: true, termsVersion: TERMS_VERSION };
