@@ -638,8 +638,12 @@ Insert immediately after the first paragraph of §04 (the one beginning
 
 - [ ] **Step 3: Add the deposit paragraph to §05 Cancellation**
 
-Insert after the "Term plans" paragraph and before the "If we are at fault"
-paragraph:
+Insert after the "If we are at fault" paragraph and before the "In short"
+note. Placement matters: the "If we are at fault" paragraph opens with "the
+paragraph above," which must keep referring to the "Term plans" paragraph
+immediately preceding it. Inserting the new paragraph between them would
+shift that back-reference onto the new paragraph instead — do not put
+anything between "Term plans" and "If we are at fault".
 
 ```html
       <p>

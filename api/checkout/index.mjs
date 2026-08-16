@@ -60,7 +60,7 @@ const CURRENT_TERMS_VERSION = '2026-09';
    so the same bytes hash the same on a Windows checkout, on the Linux CI
    runner and in what CloudFront serves; tests/terms-version.test.mjs
    recomputes it from the file on every run. */
-const TERMS_DOC_SHA256 = '2eee8290a0fa5989657982bc34dad4aba229f890f430825167cd28e35fc43a30';
+const TERMS_DOC_SHA256 = 'efe9f87081f577e6d6b430d3a8c00927603984295505f568a2b0cea10bff6423';
 
 const TERMS_ERROR = 'Agree to the Service Terms before checking out.';
 /* A ticked box naming a version we do not serve means the visitor was shown a
