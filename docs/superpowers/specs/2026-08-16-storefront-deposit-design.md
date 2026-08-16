@@ -290,3 +290,90 @@ without touching anything else.
   carries the milestone, and nothing in the system tracks that a build is
   half-paid. Option B's distinct price IDs are what make that recoverable —
   deposits without a matching balance are queryable.
+
+## Findings — Task 1 dry run (2026-08-16)
+
+**Go/no-go: NO-GO on §6 as written.** The runbook's exact snippets do not do
+what §6 claims, for a reason unrelated to the merge question they were meant
+to test. Ran against the test-mode account (API version `2026-07-29.dahlia`,
+customer `cus_V5LgyPxkMvmtyZ`, deleted and deletion confirmed afterward — see
+below), using the brief's Steps 1–4 with one forced correction.
+
+**Correction forced before anything would run.** `POST /v1/invoiceitems` with
+a bare `price=<id>` param — exactly what §6 and the brief's snippet both use —
+fails on this account's current API version: `"Received unknown parameter:
+price. Did you mean pricing?"`. The working shape is `pricing[price]=<id>`.
+A first throwaway customer (`cus_V5Le7tayGRXdwH`) was created to isolate this,
+then deleted (confirmed deleted=true) before the real run below, which used a
+fresh customer. **§6's snippets need this param rename regardless of anything
+else in this section.**
+
+**Milestone 1 (on approval) — did not invoice the deposit.** Created invoice
+item "DRY RUN deposit (1 of 2)" (450000), then `POST /v1/invoices
+customer=... collection_method=charge_automatically`, then finalized.
+Expected one line, total `450000`. Actual: invoice `in_1U5AyyEEEbkqqitbOZaoXhX9`,
+status `paid`, **total `0`, `0` lines**. The pending item was never attached.
+No error was raised anywhere in this sequence — the empty invoice finalizes
+and reports "paid" like a real success.
+
+Root cause, confirmed against Stripe's current API reference for `POST
+/v1/invoices`: `pending_invoice_items_behavior` now **defaults to `exclude`**
+when the param is omitted — "Always create an empty invoice draft regardless
+if there are pending invoice items or not." §6's "on approval" call omits this
+parameter, so on this account it silently produces a $0 invoice instead of
+billing the deposit. This is independent of API version quirks in the sense
+that it is documented, current Stripe behavior — not a fluke of this account.
+
+**Milestone 2 (on completion) — swept up both items, not just the balance.**
+Created invoice item "DRY RUN balance (2 of 2)" (450000), then a subscription
+on the recurring price. `sub.latest_invoice` came back as
+`in_1U5Az2EEEbkqqitb9rGxfPbb`, status `paid`, **total `914900`, `3` lines**
+(brief predicted 1 invoice / 2 lines / `464900`):
+
+```
+DRY RUN balance (2 of 2)                                   450000
+DRY RUN deposit (1 of 2)                                   450000
+1 × GenieSolos Storefront (build + care) (at $149.00/mo)     14900
+```
+
+The "DRY RUN deposit (1 of 2)" line traces (via the line's
+`parent.invoice_item_details.invoice_item`) to the exact same invoice item
+created in Milestone 1 — it never left "pending" because Milestone 1 never
+consumed it, so it rode along when the subscription's invoice was built.
+`GET /v1/invoices?customer=...` afterward showed exactly these two invoices
+for the customer (`$0` and `$9,149.00`), and zero pending invoice items
+remained. Both one-time items also stayed as two distinct 450000 lines rather
+than merging into one 900000 line, despite sharing a price ID — Stripe does
+not collapse same-price invoice items together.
+
+**Does the underlying claim hold?** Partially, and the part that holds is not
+the part that matters. The mechanism "a subscription's first invoice sweeps
+in the customer's pending invoice items" is directly confirmed — two separate
+pending items plus the recurring line all landed on one invoice together.
+But the two-milestone design this spec describes does **not** work as
+written: the deposit is never actually collected at approval (a $0 invoice
+that reports success), and the full $9,149 — deposit, balance, and first
+month together — gets charged in one shot at completion instead. That is the
+opposite of what §"Decisions taken" commits to ("Keep the approval gate...the
+deposit is invoiced by hand after the review call").
+
+**What §6 must say instead**, before Task 7 writes the runbook:
+1. Every `POST /v1/invoiceitems` call uses `pricing[price]=<id>`, not
+   `price=<id>`.
+2. The "on approval" `POST /v1/invoices` call must add
+   `pending_invoice_items_behavior=include`, or it silently produces a $0
+   invoice.
+3. With fix (2) applied, Milestone 1 should consume the deposit item and
+   leave nothing pending, so Milestone 2 should then see only the balance
+   item plus the recurring line — the brief's original 1-invoice/2-line/
+   `464900` prediction. **This was not independently re-run** (this task's
+   scope is bounded to what the brief specifies, and a live retest is a good
+   candidate for a follow-up check before Task 7's runbook ships), so it is a
+   strong inference from the observed sweep-in behavior, not a directly
+   confirmed number. Task 7 (or a fast follow-up) should re-run the corrected
+   sequence once before the runbook is finalized.
+
+**Customer cleanup.** `cus_V5LgyPxkMvmtyZ` (the real run) and
+`cus_V5Le7tayGRXdwH` (the param-rename probe) were both deleted via `DELETE
+/v1/customers/:id`; both refetches returned `deleted: true`. No Stripe test
+objects from this task remain outstanding.
