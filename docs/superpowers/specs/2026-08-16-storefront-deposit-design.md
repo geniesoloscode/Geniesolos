@@ -515,8 +515,11 @@ runbook step that needs an immediate "did it charge" answer. This probe
 invoice was never meant to be collected; it was voided (`status: void`)
 before moving on, and pending items were confirmed at `0` afterward.
 
-**Milestone 2 — unchanged, reconfirmed a third time.** Balance item, then
-subscription. `sub_1U5BCBEEEbkqqitbTyPsyHAs`, `latest_invoice`
+**Milestone 2 — the 2-line/no-cross-contamination shape holds for the third
+consecutive time (passes 2 and 3; pass 1's milestone 2 was 3 lines at
+`914900` because pass 1's milestone 1 never consumed its pending item — see
+the first-pass findings above).** Balance item, then subscription.
+`sub_1U5BCBEEEbkqqitbTyPsyHAs`, `latest_invoice`
 `in_1U5BCBEEEbkqqitbbyQSBqJz`: `status: paid`, `amount_paid: 189900`,
 **exactly 2 lines**:
 
@@ -548,3 +551,45 @@ refetch returned `deleted: true`. All three throwaway prices archived via
 `price_1U5BBrEEEbkqqitb4DmapMU3`, `price_1U5BBsEEEbkqqitbWYThjxJW`). No
 product was created; all three prices were attached to the existing
 `storefront-build` product, which is unaffected.
+
+## Fix round 1 — cleanup remediation (2026-08-16)
+
+Review found two Important gaps and two Minor ones in the cleanup discipline
+above. All four addressed here.
+
+**Important 1 — pass 2's stranded invoice was real and had gone
+unmentioned.** `in_1U5B5nEEEbkqqitbGFxMR5bd` (pass 2's deposit invoice,
+finalized `open`, `/pay` failing because its customer was already deleted)
+was never accounted for in the pass-2 cleanup section — a reader skimming
+cleanup summaries would have believed pass 2 left nothing behind. Retried
+`/pay` first (failed the same way, customer still deleted), then tried
+`POST .../invoices/:id/void` — **it succeeded**, refetch confirming
+`status: void`, `amount_paid: 0`, `total: 225000`. New information from this
+remediation: voiding an already-open invoice is allowed even after its
+customer is deleted, though paying one is not. The invoice is no longer
+stranded.
+
+**Important 2 — subscription cancellation independently verified, not
+just inferred.** All three subscriptions created across the passes were
+refetched (previously only asserted from documented "deleting a customer
+cancels its subscriptions" behavior, never checked):
+
+| Subscription | Pass | Status | `canceled_at` (UTC) |
+|---|---|---|---|
+| `sub_1U5Az2EEEbkqqitbBGNe7Xnd` | 1 | `canceled` | 2026-08-16 20:48:57Z |
+| `sub_1U5B5sEEEbkqqitbcdHH0jn7` | 2 | `canceled` | 2026-08-16 20:55:54Z |
+| `sub_1U5BCBEEEbkqqitbTyPsyHAs` | 3 | `canceled` | 2026-08-16 21:02:25Z |
+
+All genuinely `canceled`, timestamps matching each customer's deletion. The
+assertion was correct; it had simply never been checked.
+
+**Minor 3 — probe invoice void, reconfirmed.**
+`GET .../invoices/in_1U5BC3EEEbkqqitbyEdpLR3S` returns `status: void`,
+`total: 199900` — matches what pass 3 reported, now backed by an explicit
+refetch instead of the finalize-time response alone.
+
+**Minor 4 — milestone-2 header reworded** in both this spec and the report
+to state the pass-1-vs-pass-2/3 difference (3 lines / `914900` vs. 2 lines /
+`189900`) rather than imply the shape was identical across all three passes.
+
+All four review findings are now addressed.
