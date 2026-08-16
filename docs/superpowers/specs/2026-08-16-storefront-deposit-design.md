@@ -459,3 +459,92 @@ archived via `POST /v1/prices/:id active=false`; refetch confirmed
 `active: false` on both (`price_1U5B5kEEEbkqqitbvGsvWxfN`,
 `price_1U5B5lEEEbkqqitbCEXDW1TN`). No product was created — both prices were
 attached to the existing `storefront-build` product, which is unaffected.
+
+## Third pass — explicit pay (2026-08-16)
+
+Authorized because `auto_advance` was itself in the same unproven position
+`pending_invoice_items_behavior` had been in earlier — a docs-level
+recommendation, not a live result, on the leg where money actually moves.
+Ran the full sequence on one fresh customer, `cus_V5LtGlDs3qTlFZ` (deleted
+last, after everything was settled — see cleanup order below), proving the
+**explicit `/pay` route** as primary rather than `auto_advance=true`, and
+settling the `default_payment_method` question along the way. Three
+throwaway one-time prices, all distinct amounts, all archived afterward:
+deposit `225000`, an `auto_advance` probe `199900`, balance `175000`.
+
+**Milestone 1 — deposit invoice, explicit pay.** Invoice
+`in_1U5BBvEEEbkqqitbGFNzSqHC`: 1 line, total `225000`, finalized to `open`
+(expected — nothing auto-charges it yet). A card was attached to the
+customer but **`invoice_settings[default_payment_method]` was deliberately
+left unset**, to test what `/pay` actually requires:
+
+- **Attempt 1 — bare `/pay`, no default anywhere:** failed, with a precise,
+  actionable Stripe error: *"There is no `default_payment_method` set on
+  this Customer or Invoice. Set a default on one of those objects, or
+  specify the Payment Method you wish to use in the `payment_method`
+  parameter."*
+- **Attempt 2 — `/pay` with `payment_method=<pm_id>` explicit, still no
+  default set anywhere:** **succeeded** — `status: paid`, `amount_paid:
+  225000`, `attempted: true`, `attempt_count: 1`. Money moved, synchronously,
+  in this one call.
+
+So the answer to "does the card need attaching as
+`invoice_settings[default_payment_method]`" is: **not for the deposit's own
+`/pay` call** — passing `payment_method=<pm_id>` directly on `/pay` is
+sufficient and simpler than a separate customer-update step. (A
+`default_payment_method` was still set on the customer immediately
+afterward, for Milestone 2's subscription — that step was **not** isolated
+from Milestone 1, so whether the subscription would have gone through
+without it is inferred from ordinary Stripe subscription behavior, not
+independently proven here. Recommend the runbook keep that step for the
+subscription's sake regardless.) `GET .../invoiceitems?...&pending=true`
+after Milestone 1: **0** — item consumed, same as pass two.
+
+**`auto_advance=true` probe — confirms it is the wrong shape for a runbook.**
+A second, distinct-amount invoice (`in_1U5BC3EEEbkqqitbyEdpLR3S`, total
+`199900`) was created with `auto_advance=true` and finalized. Immediately
+after: `status: open`, `attempted: false`, but `next_payment_attempt` **was**
+populated — Stripe had scheduled a future attempt, roughly **59 minutes**
+out (`1786917731`, computed against the wall-clock time of the check),
+consistent with the "approximately one hour" cadence in Stripe's own
+automatic-advancement docs. Five seconds later: still `open`, still
+`attempted: false`, `attempt_count: 0`. This is the concrete evidence behind
+the coordinator's suspicion: `auto_advance=true` does work, but on a
+roughly-hour-long async cadence with no interim signal — unusable for a
+runbook step that needs an immediate "did it charge" answer. This probe
+invoice was never meant to be collected; it was voided (`status: void`)
+before moving on, and pending items were confirmed at `0` afterward.
+
+**Milestone 2 — unchanged, reconfirmed a third time.** Balance item, then
+subscription. `sub_1U5BCBEEEbkqqitbTyPsyHAs`, `latest_invoice`
+`in_1U5BCBEEEbkqqitbbyQSBqJz`: `status: paid`, `amount_paid: 189900`,
+**exactly 2 lines**:
+
+```
+DRY RUN pass3 balance (2 of 2)                                175000
+1 × GenieSolos Storefront (build + care) (at $149.00 / month)   14900
+```
+
+No deposit line, no probe-amount line. Full ledger for the customer at the
+end: 3 invoices — deposit `225000` (`paid`), probe `199900` (`void`, by
+design), balance+recurring `189900` (`paid`). `0` pending items remained
+throughout.
+
+**Revised go/no-go: GO**, on the four-fix sequence, now fully proven live and
+end to end, with real money movement observed (not just correct line
+items): `pricing[price]`, `pending_invoice_items_behavior=include`,
+`POST /v1/invoices/:id/pay` with an explicit `payment_method=<pm_id>` (not
+`auto_advance=true`), and — recommended, though not independently isolated
+in this run — `invoice_settings[default_payment_method]` set on the customer
+before Milestone 2's subscription is created. **No fourth gap surfaced in
+this pass.**
+
+**Cleanup, done last as required** (pay/verify everything, *then* clean
+up — pass two's stranded invoice came from getting this order backwards).
+Customer `cus_V5LtGlDs3qTlFZ` deleted via `DELETE /v1/customers/:id`;
+refetch returned `deleted: true`. All three throwaway prices archived via
+`POST /v1/prices/:id active=false`, each archive response confirming
+`active: false` (`price_1U5BBrEEEbkqqitbAoeWvRYc`,
+`price_1U5BBrEEEbkqqitb4DmapMU3`, `price_1U5BBsEEEbkqqitbWYThjxJW`). No
+product was created; all three prices were attached to the existing
+`storefront-build` product, which is unaffected.
