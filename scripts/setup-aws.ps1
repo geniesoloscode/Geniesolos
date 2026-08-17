@@ -186,9 +186,15 @@ try {
     $HaveKey   = Test-Path -LiteralPath $KeyFile
     if ($HaveKey) {
         $StripeKey = (Get-Content -LiteralPath $KeyFile -Raw).Trim()
-        $expectedPrefix = "sk_${Mode}_"
-        if (-not $StripeKey.StartsWith($expectedPrefix)) {
-            throw "scripts\.secrets\stripe-$Mode.key does not look like a $Mode key (expected prefix '$expectedPrefix'). Found: $(Mask-Key $StripeKey)"
+        # Restricted keys (rk_) are accepted alongside full secret keys (sk_),
+        # and are what this project should be using: nothing here needs the
+        # ability to refund, read customer details, or move money. What must
+        # match is the MODE segment, and that is the part carrying weight - on
+        # 2026-08-16 a live key was saved into stripe-test.key by mistake, and
+        # this is the check that catches that class of error before any API
+        # call is made against the wrong account.
+        if (-not ($StripeKey.StartsWith("sk_${Mode}_") -or $StripeKey.StartsWith("rk_${Mode}_"))) {
+            throw "scripts\.secrets\stripe-$Mode.key is not a $Mode key (expected 'sk_${Mode}_' or 'rk_${Mode}_'). Found: $(Mask-Key $StripeKey)"
         }
         Ok "Stripe $Mode key loaded: $(Mask-Key $StripeKey)"
     } elseif ($DryRun) {

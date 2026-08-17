@@ -51,19 +51,30 @@ $StripeApi = 'https://api.stripe.com'
 # array. The Lambda treats a non-array or empty value as a config error, so
 # this script always writes arrays - see the @() wrapping down in the
 # JSON-write step.
+#
+# THE NAMES ARE CUSTOMER-FACING. They print on invoices and receipts, and
+# reconciliation matches them EXACTLY - a different case, a space where there
+# is a hyphen, or a missing word all read as a new product and create a
+# duplicate rather than reusing the existing one. Owner's chosen scheme
+# (2026-08-16): the three tier plans shout, everything else is title case.
+#
+# This list is shared by BOTH modes. It was retargeted to these names for the
+# live build, so the test-mode account still holds the older 'GenieSolos X'
+# products; running -Mode test against it will create duplicates until those
+# are renamed or archived to match.
 $Catalog = @(
-    @{ Key = 'lifeline';         Name = 'GenieSolos Lifeline';                  Prices = @(@{ Amount = 29900;  Recurring = $true }) }
-    @{ Key = 'presence';         Name = 'GenieSolos Presence';                  Prices = @(@{ Amount = 64900;  Recurring = $true }) }
-    @{ Key = 'transformation';   Name = 'GenieSolos Transformation';            Prices = @(@{ Amount = 99900;  Recurring = $true }) }
-    @{ Key = 'storefront-zero';  Name = 'GenieSolos Storefront (zero-down)';    Prices = @(@{ Amount = 49900;  Recurring = $true }) }
-    @{ Key = 'storefront-build'; Name = 'GenieSolos Storefront (build + care)'; Prices = @(
+    @{ Key = 'lifeline';         Name = 'LIFELINE';                   Prices = @(@{ Amount = 29900;  Recurring = $true }) }
+    @{ Key = 'presence';         Name = 'PRESENCE';                   Prices = @(@{ Amount = 64900;  Recurring = $true }) }
+    @{ Key = 'transformation';   Name = 'TRANSFORMATION';             Prices = @(@{ Amount = 99900;  Recurring = $true }) }
+    @{ Key = 'storefront-zero';  Name = 'Storefront (zero-down)';     Prices = @(@{ Amount = 49900;  Recurring = $true }) }
+    @{ Key = 'storefront-build'; Name = 'Storefront (build + care)';  Prices = @(
         @{ Amount = 14900;  Recurring = $true }
         @{ Amount = 225000; Recurring = $false; Nickname = 'Storefront build deposit (1 of 2)' }
         @{ Amount = 225000; Recurring = $false; Nickname = 'Storefront build balance (2 of 2)' }
     ) }
-    @{ Key = 'server-care';      Name = 'GenieSolos Server Care';               Prices = @(@{ Amount = 22500;  Recurring = $true }) }
-    @{ Key = 'db-care';          Name = 'GenieSolos Database Care';             Prices = @(@{ Amount = 17500;  Recurring = $true }) }
-    @{ Key = 'workspace-admin';  Name = 'GenieSolos Workspace Admin';           Prices = @(@{ Amount = 19900;  Recurring = $true }) }
+    @{ Key = 'server-care';      Name = 'Server Care';                Prices = @(@{ Amount = 22500;  Recurring = $true }) }
+    @{ Key = 'db-care';          Name = 'Database Care';              Prices = @(@{ Amount = 17500;  Recurring = $true }) }
+    @{ Key = 'workspace-admin';  Name = 'Workspace Admin';            Prices = @(@{ Amount = 19900;  Recurring = $true }) }
 )
 
 Push-Location $RepoRoot
@@ -102,11 +113,18 @@ try {
         throw "scripts\.secrets\stripe-$Mode.key is empty. Put your Stripe $Mode secret key in it and try again."
     }
 
-    $expectedPrefix = "sk_${Mode}_"
-    if (-not $StripeKey.StartsWith($expectedPrefix)) {
-        Warn "scripts\.secrets\stripe-$Mode.key does not look like a $Mode key."
-        Warn "Expected a key starting with '$expectedPrefix'. Found: $(Mask-Key $StripeKey)"
-        throw "Key prefix does not match -Mode $Mode - aborting before any Stripe API call."
+    # Restricted keys (rk_) are accepted alongside full secret keys (sk_), and
+    # are what this project should be using: this script only needs write on
+    # products, prices and webhook endpoints, so a key that can also refund or
+    # read customer details is over-privileged for the job.
+    #
+    # The MODE segment is the part that carries weight. On 2026-08-16 a live
+    # key was saved into stripe-test.key by mistake; this check is what stops
+    # that reaching the wrong account, and it fires before any API call.
+    if (-not ($StripeKey.StartsWith("sk_${Mode}_") -or $StripeKey.StartsWith("rk_${Mode}_"))) {
+        Warn "scripts\.secrets\stripe-$Mode.key is not a $Mode key."
+        Warn "Expected a key starting with 'sk_${Mode}_' or 'rk_${Mode}_'. Found: $(Mask-Key $StripeKey)"
+        throw "Key mode does not match -Mode $Mode - aborting before any Stripe API call."
     }
 
     Ok "key loaded: $(Mask-Key $StripeKey)"
