@@ -395,6 +395,16 @@ td { color: var(--ink-2); }
 td:first-child { color: var(--ink); font-weight: 600; }
 .num { font-family: var(--mono); font-size: 13.5px; }
 
+/* Inline literals - storage keys, header names - inside document prose. */
+.paper code {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: var(--lilac);
+  color: var(--ink);
+}
+
 /* callout: for the clauses that most often surprise people */
 .note {
   max-width: 68ch;

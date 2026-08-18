@@ -74,7 +74,7 @@ jobs:
       # stylesheet with a stale document.
       - name: Upload HTML
         run: |
-          for f in index.html 404.html terms.html store.html; do
+          for f in index.html 404.html terms.html store.html privacy.html; do
             aws s3 cp "$f" "s3://$BUCKET/$f" \
               --cache-control "public, max-age=0, must-revalidate" \
               --content-type "text/html; charset=utf-8"
@@ -87,6 +87,10 @@ jobs:
             --content-type "text/html; charset=utf-8"
           # Clean-URL copy for the store, same reasoning as terms above.
           aws s3 cp store.html "s3://$BUCKET/store" \
+            --cache-control "public, max-age=0, must-revalidate" \
+            --content-type "text/html; charset=utf-8"
+          # Clean-URL copy for the privacy policy, same reasoning as terms.
+          aws s3 cp privacy.html "s3://$BUCKET/privacy" \
             --cache-control "public, max-age=0, must-revalidate" \
             --content-type "text/html; charset=utf-8"
 

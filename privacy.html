@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Privacy Policy | GenieSolos Tech</title>
+<meta name="description" content="What GenieSolos Tech collects on geniesolos.com, who receives it, how long it is kept, and how to reach us. No cookies, no analytics, no trackers.">
+<meta name="author" content="Gene Garland">
+<link rel="canonical" href="https://geniesolos.com/privacy">
+<meta name="theme-color" content="#FAF5EC" id="themeColor">
+
+<!-- Applies the saved theme before first paint, same as the homepage, so a
+     dark-theme visitor never eats a cream flash. This block is byte-identical
+     to the one in index.html ON PURPOSE: the CloudFront CSP allows inline
+     scripts only by sha256 hash, and that hash covers exactly this text. Any
+     edit here must be mirrored in index.html AND in the CSP response headers
+     policy on the distribution. -->
+<script>
+(function () {
+  var pick = null;
+  var q = /[?&]theme=(dark|light)\b/.exec(location.search);   // shareable / testable
+  if (q) { pick = q[1]; }
+  else {
+    try { pick = localStorage.getItem('gs-theme'); } catch (e) { /* private mode */ }
+  }
+  if (pick === 'dark') {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    var m = document.getElementById('themeColor');
+    if (m) m.setAttribute('content', '#060807');
+  }
+})();
+</script>
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="Privacy Policy | GenieSolos Tech">
+<meta property="og:description" content="What we collect, who receives it, and how long we keep it. No cookies, no analytics, no trackers.">
+<meta property="og:url" content="https://geniesolos.com/privacy">
+<meta property="og:image" content="https://geniesolos.com/assets/og-card.png">
+
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/favicon.svg">
+
+<!-- Self-hosted: no request leaves this origin. See css/fonts.css. The body
+     face is preloaded because every page uses it for all running text. -->
+<link rel="preload" href="assets/fonts/space-grotesk-400-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/fonts.css?v=20260817">
+
+<!-- Shares css/terms.css with the Service Terms: same document furniture,
+     same plate, same paper. Nothing inline - CloudFront serves a CSP with
+     style-src 'self', which blocks inline <style> blocks entirely. -->
+<link rel="stylesheet" href="css/terms.css?v=20260817">
+</head>
+<body>
+
+<a class="skip" href="#privacy">Skip to content</a>
+
+<!-- ══════════ NAV ══════════ -->
+<header class="nav">
+  <a class="nav__brand" href="./">
+    <span class="nav__mark" aria-hidden="true">
+      <svg viewBox="0 0 32 32" width="26" height="26"><path d="M16 2 29 9.5v15L16 32 3 24.5v-15Z" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M16 9v7l6 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="16" cy="16" r="1.9" fill="currentColor"/></svg>
+    </span>
+    <span class="nav__name">GENIESOLOS</span>
+  </a>
+
+  <div class="nav__end">
+    <a class="nav__back" href="./"><span>&larr; Back to site</span></a>
+    <a class="nav__back" href="terms"><span>Service Terms</span></a>
+    <button class="themetog" id="themeToggle" type="button" role="switch" aria-checked="false"
+            aria-label="Dark theme" title="Switch theme">
+      <span class="themetog__thumb" aria-hidden="true">
+        <svg class="themetog__ico themetog__ico--sun" viewBox="0 0 24 24" width="15" height="15">
+          <circle cx="12" cy="12" r="4.2" fill="currentColor"/>
+          <g stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M12 2.6v2.2M12 19.2v2.2M21.4 12h-2.2M4.8 12H2.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6M18.7 18.7l-1.6-1.6M6.9 6.9 5.3 5.3"/>
+          </g>
+        </svg>
+        <svg class="themetog__ico themetog__ico--moon" viewBox="0 0 24 24" width="15" height="15">
+          <path d="M20 14.2A8.4 8.4 0 0 1 9.8 4a8.4 8.4 0 1 0 10.2 10.2Z" fill="currentColor"/>
+        </svg>
+      </span>
+    </button>
+  </div>
+</header>
+
+<!-- ══════════ DOCUMENT PLATE ══════════ -->
+<section class="plate">
+  <p class="plate__mark">
+    <svg viewBox="0 0 32 32" width="30" height="30" aria-hidden="true"><path d="M16 2 29 9.5v15L16 32 3 24.5v-15Z" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M16 9v7l6 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="16" cy="16" r="1.9" fill="currentColor"/></svg>
+    GenieSolos&nbsp;Tech
+    <span class="rule" aria-hidden="true"></span>
+  </p>
+
+  <h1>Privacy <em>Policy</em></h1>
+
+  <p class="plate__lede">
+    <b>This is the whole of it.</b> This policy covers geniesolos.com and the GenieSolos&nbsp;Tech
+    store. It describes what personal information we collect, who else receives it, how long we
+    keep it, and how to ask us about it. GenieSolos is Gene&nbsp;Garland doing business as
+    GenieSolos, a Maryland sole proprietorship; GenieSolos&nbsp;Tech is a department of GenieSolos
+    and not a separate legal entity (&ldquo;we,&rdquo; &ldquo;us&rdquo;).
+  </p>
+
+  <dl class="plate__meta">
+    <div>
+      <dt>Document</dt>
+      <dd>GS&#8209;PRIVACY&#8209;POLICY</dd>
+    </div>
+    <div>
+      <dt>Effective</dt>
+      <dd>August 17, 2026</dd>
+    </div>
+    <div>
+      <dt>Governing law</dt>
+      <dd>State of Maryland</dd>
+    </div>
+    <div>
+      <dt>Questions</dt>
+      <dd><a href="mailto:geniesolostech@gmail.com">geniesolostech@gmail.com</a></dd>
+    </div>
+  </dl>
+</section>
+
+<!-- ══════════ DOCUMENT BODY ══════════ -->
+<main class="doc" id="privacy">
+
+  <nav class="toc" aria-label="Table of contents">
+    <h2>Contents</h2>
+    <ol>
+      <li><a href="#collect">What we collect</a></li>
+      <li><a href="#payments">Payments and card details</a></li>
+      <li><a href="#browser">What this site stores in your browser</a></li>
+      <li><a href="#tracking">Tracking, analytics, and Do Not Track</a></li>
+      <li><a href="#third-parties">Who else receives your information</a></li>
+      <li><a href="#logs">Server logs</a></li>
+      <li><a href="#retention">How long we keep it</a></li>
+      <li><a href="#security">How we protect it</a></li>
+      <li><a href="#choices">Your choices, and how to reach us</a></li>
+      <li><a href="#children">Children</a></li>
+      <li><a href="#california">California residents</a></li>
+      <li><a href="#changes">Changes to this policy</a></li>
+    </ol>
+  </nav>
+
+  <article class="paper">
+
+    <section class="sec" id="collect">
+      <header class="sec__head"><span class="sec__num">01</span><h2>What we collect</h2></header>
+
+      <div class="note">
+        <b>In short:</b> we collect what you type when you place an order, plus a record of your
+        agreement to the Service Terms. Browsing the site collects nothing at all.
+      </div>
+
+      <p>
+        <b>Nothing is collected when you simply read this site.</b> There is no account to create,
+        no sign-up, no newsletter, and no form that runs while you browse. You can read every page
+        here without giving us anything.
+      </p>
+
+      <p>When you place an order through the store, we collect:</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <caption>Collected at checkout</caption>
+          <thead>
+            <tr><th>What</th><th>Where it is entered</th><th>Why</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Your name and email address</td><td>Stripe&rsquo;s checkout page</td><td>To identify the order and reach you about it</td></tr>
+            <tr><td>Your phone number</td><td>The cart drawer on our store page</td><td>So we can call you before any billing starts</td></tr>
+            <tr><td>What you selected</td><td>The cart on our store page</td><td>To know what you ordered</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        When you tick the box agreeing to the Service Terms, we record proof of that agreement:
+        <b>the date and time, your IP address, your browser&rsquo;s user-agent string, which version
+        of the Service Terms you agreed to, and a cryptographic fingerprint of that exact
+        document.</b> We derive every one of those on our own server rather than accepting them
+        from your browser, because a record you could edit would not be evidence of anything. The
+        fingerprint means we can prove later precisely which words you agreed to, down to the byte.
+      </p>
+
+      <p>
+        If you email or call us using the addresses and numbers published on this site, we receive
+        whatever you choose to put in that message.
+      </p>
+    </section>
+
+    <section class="sec" id="payments">
+      <header class="sec__head"><span class="sec__num">02</span><h2>Payments and card details</h2></header>
+
+      <div class="note">
+        <b>In short:</b> your card number never reaches our servers, and checkout does not charge
+        you.
+      </div>
+
+      <p>
+        Card details are entered on <b>Stripe&rsquo;s own checkout page, hosted on Stripe&rsquo;s
+        domain</b> &mdash; not on ours. Your full card number is never transmitted to, processed
+        by, or stored on our servers, and we never receive it. In the Stripe dashboard we can see
+        only the card brand and its last four digits, the same as on a paper receipt.
+      </p>
+
+      <p>
+        Checkout does not charge you. It saves your card and creates an approval record. Nothing is
+        billed until we have spoken with you and you have approved the work, as described in the
+        <a href="terms">Service Terms</a>.
+      </p>
+
+      <p>
+        Stripe handles your payment information under its own privacy policy and as its own data
+        controller, not merely on our instruction. Read it at
+        <a href="https://stripe.com/privacy" target="_blank" rel="noopener">stripe.com/privacy</a>.
+      </p>
+    </section>
+
+    <section class="sec" id="browser">
+      <header class="sec__head"><span class="sec__num">03</span><h2>What this site stores in your browser</h2></header>
+
+      <div class="note">
+        <b>In short:</b> this site sets no cookies. That is why you have never seen a cookie banner
+        here.
+      </div>
+
+      <p>
+        We use <b>no cookies of any kind</b> &mdash; not for analytics, not for advertising, not
+        even for preferences. What we do use is a small amount of browser-local storage, which
+        stays on your device and is never transmitted to us or to anyone else:
+      </p>
+
+      <div class="tbl-wrap">
+        <table>
+          <caption>Stored locally in your browser</caption>
+          <thead>
+            <tr><th>Name</th><th>What it holds</th><th>Cleared when</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>gs-theme</code></td><td>Whether you chose the light or dark theme</td><td>You clear site data</td></tr>
+            <tr><td><code>gs-cart</code></td><td>What is currently in your cart</td><td>You clear site data</td></tr>
+            <tr><td><code>gs-booted</code></td><td>Whether the intro animation has played this session</td><td>You close the tab</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        None of these identify you, and none of them leave your device. Clearing your browser&rsquo;s
+        site data for geniesolos.com removes all of them, and the site works normally afterward.
+      </p>
+    </section>
+
+    <section class="sec" id="tracking">
+      <header class="sec__head"><span class="sec__num">04</span><h2>Tracking, analytics, and Do Not Track</h2></header>
+
+      <div class="note">
+        <b>In short:</b> we do not track you. There is no analytics on this site at all.
+      </div>
+
+      <p>
+        We run <b>no analytics software, no advertising pixels, no session recording, no
+        fingerprinting, and no third-party tracking scripts</b>. We do not build a profile of you,
+        and we do not follow you across other websites. No third party collects personally
+        identifiable information about your activity across other sites through this site.
+      </p>
+
+      <p>
+        <b>Do Not Track.</b> Some browsers send a &ldquo;Do Not Track&rdquo; signal. There is no
+        industry agreement on what a site should do with it. Our answer is simple: we honor it by
+        not tracking anyone in the first place, whether the signal is sent or not. There is no
+        behavior to turn off.
+      </p>
+    </section>
+
+    <section class="sec" id="third-parties">
+      <header class="sec__head"><span class="sec__num">05</span><h2>Who else receives your information</h2></header>
+
+      <div class="note">
+        <b>In short:</b> four companies, all of them infrastructure. <b>We do not sell, rent, or
+        trade your personal information &mdash; to anyone, for any price, ever.</b>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <caption>Everyone who receives data, and why</caption>
+          <thead>
+            <tr><th>Who</th><th>What they receive</th><th>Why</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Stripe</td>
+              <td>Your name, email, phone, order, agreement record, and card details</td>
+              <td>To process payments &mdash; <a href="https://stripe.com/privacy" target="_blank" rel="noopener">stripe.com/privacy</a></td>
+            </tr>
+            <tr>
+              <td>Amazon Web Services</td>
+              <td>Hosts this site; carries the order notification to us</td>
+              <td>Infrastructure &mdash; <a href="https://aws.amazon.com/privacy/" target="_blank" rel="noopener">aws.amazon.com/privacy</a></td>
+            </tr>
+            <tr>
+              <td>Google (Gmail)</td>
+              <td>The order notification email, which contains your order details</td>
+              <td>It is the inbox that receives our mail &mdash; <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">policies.google.com/privacy</a></td>
+            </tr>
+            <tr>
+              <td>Google Fonts</td>
+              <td>Your IP address and browser type, when a page loads its typefaces</td>
+              <td>Typography &mdash; see the note below</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        <b>About Google Fonts.</b> The typefaces on this site are served by Google Fonts, which
+        means your browser requests them from Google and Google therefore receives your IP address
+        and browser type on each page load. Google states that Google Fonts sets no cookies and
+        that it does not use these requests for advertising or to identify individuals. We include
+        this because it is the one third-party request this site makes while you are simply
+        reading, and you deserve to know about it.
+      </p>
+
+      <p>
+        We may also disclose information if the law requires it &mdash; a subpoena, court order, or
+        similar legal demand &mdash; or where necessary to establish or defend a legal claim. We do
+        not disclose customer information voluntarily otherwise.
+      </p>
+    </section>
+
+    <section class="sec" id="logs">
+      <header class="sec__head"><span class="sec__num">06</span><h2>Server logs</h2></header>
+
+      <div class="note">
+        <b>In short:</b> we keep no record of who visits which page.
+      </div>
+
+      <p>
+        <b>Web-server access logging is turned off.</b> Our content delivery network is configured
+        not to write access logs, so there is no file anywhere recording that a given IP address
+        viewed a given page at a given time. This is deliberate: a log we do not keep is one that
+        cannot be leaked, subpoenaed, or misused.
+      </p>
+
+      <p>
+        Our checkout and order-notification services write short operational logs so we can tell
+        whether they are working. Those entries contain <b>only Stripe session and event
+        identifiers &mdash; no names, no email addresses, no phone numbers, no IP addresses.</b>
+        They are automatically deleted after 90&nbsp;days.
+      </p>
+    </section>
+
+    <section class="sec" id="retention">
+      <header class="sec__head"><span class="sec__num">07</span><h2>How long we keep it</h2></header>
+
+      <div class="tbl-wrap">
+        <table>
+          <caption>Retention</caption>
+          <thead>
+            <tr><th>What</th><th>Kept for</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Order and customer records, including your agreement record</td><td>While you are a customer, then <b>7 years</b> after your last transaction</td></tr>
+            <tr><td>Order notification emails in our inbox</td><td>Same as above</td></tr>
+            <tr><td>Operational service logs</td><td>90 days, then deleted automatically</td></tr>
+            <tr><td>Correspondence you send us</td><td>As long as it is useful to the working relationship</td></tr>
+            <tr><td>Browser storage on your device</td><td>Until you clear it &mdash; we cannot see or delete it</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        Seven years matches how long a business is expected to keep financial and tax records. We
+        keep order records that long because we are required to be able to account for them, not
+        because we have any other use for them.
+      </p>
+    </section>
+
+    <section class="sec" id="security">
+      <header class="sec__head"><span class="sec__num">08</span><h2>How we protect it</h2></header>
+
+      <p>
+        This site is served only over HTTPS, with HTTP Strict Transport Security, so traffic between
+        you and us cannot be read in transit. The order notification queue is encrypted at rest. The
+        keys our checkout service uses to talk to Stripe are <b>restricted keys</b>, scoped to the
+        two operations checkout actually needs &mdash; they cannot issue refunds, move money, or
+        read your payment history, even if they were somehow stolen.
+      </p>
+
+      <p>
+        The single largest protection is what we chose not to build: <b>we hold no card numbers, no
+        passwords, and no visitor logs</b>, so there is very little here worth stealing.
+      </p>
+
+      <p>
+        No system is perfectly secure, and we will not claim otherwise. If a breach ever affected
+        your personal information, we would notify you as required by Maryland&rsquo;s Personal
+        Information Protection Act.
+      </p>
+    </section>
+
+    <section class="sec" id="choices">
+      <header class="sec__head"><span class="sec__num">09</span><h2>Your choices, and how to reach us</h2></header>
+
+      <p>
+        Write or call, and we will tell you what we hold about you, correct anything that is wrong,
+        or delete what we are not required to keep. <b>We will respond within 30 days.</b> There is
+        no form and no ticket system &mdash; it is one person, and you will hear back from him.
+      </p>
+
+      <p>
+        Two honest limits. We may need to keep records that tax, accounting, or legal obligations
+        require us to keep, and we will tell you when that applies. And information held by Stripe
+        is also governed by Stripe&rsquo;s own policy, so a request there may need to go to Stripe
+        as well &mdash; we will help you do that.
+      </p>
+
+      <p>
+        <b>We send no marketing email.</b> There is no list to unsubscribe from. If we write to you,
+        it is about your order or your service.
+      </p>
+
+      <div class="note">
+        <b>Reach us:</b>
+        <a href="mailto:geniesolostech@gmail.com">geniesolostech@gmail.com</a>
+        &nbsp;&middot;&nbsp;
+        <a href="tel:+12403219004">240&#8209;321&#8209;9004</a>
+      </div>
+    </section>
+
+    <section class="sec" id="children">
+      <header class="sec__head"><span class="sec__num">10</span><h2>Children</h2></header>
+
+      <p>
+        This site sells business services and is not directed to children. We do not knowingly
+        collect personal information from anyone under 13. If you believe a child has given us
+        personal information, contact us and we will delete it.
+      </p>
+    </section>
+
+    <section class="sec" id="california">
+      <header class="sec__head"><span class="sec__num">11</span><h2>California residents</h2></header>
+
+      <p>
+        The California Online Privacy Protection Act requires us to state the categories of
+        personal information we collect, the categories of third parties we share it with, how you
+        can review and change it, how we announce changes to this policy, its effective date, and
+        how we respond to Do Not Track signals. All of that is covered in sections 01 through 09
+        and in section 12 above and below, and the effective date is on the plate at the top of
+        this page.
+      </p>
+
+      <p>
+        We do not meet the thresholds that make a business subject to the California Consumer
+        Privacy Act, and we do not sell or share personal information as that law defines those
+        terms. We honor access and deletion requests from anyone who asks, in any state, rather
+        than only from people a statute happens to cover.
+      </p>
+    </section>
+
+    <section class="sec" id="changes">
+      <header class="sec__head"><span class="sec__num">12</span><h2>Changes to this policy</h2></header>
+
+      <p>
+        If this policy changes, we update the effective date on the plate at the top of this page.
+        For a change that materially affects how we handle information already collected from you,
+        we will post a notice on this page and, where we hold an address for you as a customer,
+        email you directly. We will not apply a materially different practice to information we
+        already hold without telling you first.
+      </p>
+
+      <p>
+        This policy explains our privacy practices. The <a href="terms">Service Terms</a> govern the
+        services themselves. Where a signed agreement exists between us, that agreement controls
+        where it differs.
+      </p>
+    </section>
+
+  </article>
+</main>
+
+<!-- ══════════ FOOTER ══════════ -->
+<footer class="foot">
+  <div class="foot__inner">
+    <p class="foot__sig">GENIESOLOS&nbsp;TECH</p>
+    <p class="foot__meta">Privacy Policy</p>
+    <p class="foot__contact">
+      <a href="https://geniesolos.com">geniesolos.com</a> &nbsp;|&nbsp;
+      <a href="mailto:geniesolostech@gmail.com">geniesolostech@gmail.com</a> &nbsp;|&nbsp;
+      <a href="tel:+12403219004">240&#8209;321&#8209;9004</a>
+    </p>
+    <p class="foot__home"><a href="terms">Service Terms</a> &nbsp;|&nbsp; <a href="./">&larr; Back to geniesolos.com</a></p>
+  </div>
+</footer>
+
+<script src="js/terms.js?v=20260814"></script>
+</body>
+</html>

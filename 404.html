@@ -2,29 +2,60 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Page not found | Gene Garland</title>
-<meta name="robots" content="noindex">
-<meta name="theme-color" content="#FAF5EC">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Page not found | GenieSolos Tech</title>
+<meta name="description" content="That page is not here. The portfolio, the store, and the service documents all are.">
+<meta name="robots" content="noindex, follow">
+<meta name="theme-color" content="#FAF5EC" id="themeColor">
+
+<!-- Applies the saved theme before first paint. Inline and above the
+     stylesheet on purpose: anything deferred lets a dark-theme visitor
+     eat a full-screen cream flash on every page load. -->
+<script>
+(function () {
+  var pick = null;
+  var q = /[?&]theme=(dark|light)\b/.exec(location.search);   // shareable / testable
+  if (q) { pick = q[1]; }
+  else {
+    try { pick = localStorage.getItem('gs-theme'); } catch (e) { /* private mode */ }
+  }
+  if (pick === 'dark') {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    var m = document.getElementById('themeColor');
+    if (m) m.setAttribute('content', '#060807');
+  }
+})();
+</script>
 
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,600&family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/style.css?v=20260806">
+<link rel="apple-touch-icon" href="/assets/favicon.svg">
+
+<!-- Self-hosted: no request leaves this origin. See css/fonts.css. The body
+     face is preloaded because every page uses it for all running text. -->
+<link rel="preload" href="/assets/fonts/space-grotesk-400-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/css/fonts.css?v=20260817">
+<link rel="stylesheet" href="/css/style.css?v=20260817">
 </head>
 <body>
   <main class="nf">
     <p class="nf__code">404 &middot; NOT FOUND</p>
     <h1 class="nf__title">This page took a wrong turn.</h1>
     <p class="nf__text">
-      Whatever you were looking for isn't here, but the portfolio is one click away,
-      and it's the good part anyway.
+      Whatever you were after is not at this address. Nothing is broken on your end &mdash;
+      the link is just pointing somewhere that no longer exists.
     </p>
-    <a class="btn btn--solid" href="/">
-      <span>Back to the portfolio</span>
-      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    </a>
+
+    <p class="nf__actions">
+      <a class="btn btn--solid" href="/">
+        <span>Back to the site</span>
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+      <a class="btn btn--ghost" href="/store"><span>Browse the store</span></a>
+    </p>
+
+    <p class="nf__links">
+      <a href="/terms">Service Terms</a><span aria-hidden="true">&middot;</span><a href="/privacy">Privacy Policy</a><span aria-hidden="true">&middot;</span><a href="mailto:geniesolostech@gmail.com">Email us</a>
+    </p>
   </main>
 </body>
 </html>

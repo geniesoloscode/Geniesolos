@@ -45,9 +45,10 @@
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/favicon.svg">
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400;1,9..144,600&family=JetBrains+Mono:wght@300;400;500;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<!-- Self-hosted: no request leaves this origin. See css/fonts.css. The body
+     face is preloaded because every page uses it for all running text. -->
+<link rel="preload" href="assets/fonts/space-grotesk-400-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/fonts.css?v=20260817">
 
 <!-- ?v= busts browser caches holding the previous 7-day copy. index.html is
      always revalidated, so changing this string reaches visitors immediately,
@@ -658,7 +659,7 @@
     <p class="foot__sig">GENE&nbsp;GARLAND <span>·</span> GENIESOLOS</p>
     <p class="foot__meta">Systems Engineer · CISSP · Secret Clearance</p>
     <p class="foot__built">Hand-built. No template, no page builder. <span id="year"></span></p>
-    <p class="foot__legal"><a href="store">Store</a> · <a href="terms">Service Terms</a></p>
+    <p class="foot__legal"><a href="store">Store</a> · <a href="terms">Service Terms</a> · <a href="privacy">Privacy</a></p>
   </div>
 </footer>
 

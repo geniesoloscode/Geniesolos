@@ -40,14 +40,15 @@
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/favicon.svg">
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400;1,9..144,600&family=JetBrains+Mono:wght@300;400;500;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<!-- Self-hosted: no request leaves this origin. See css/fonts.css. The body
+     face is preloaded because every page uses it for all running text. -->
+<link rel="preload" href="assets/fonts/space-grotesk-400-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/fonts.css?v=20260817">
 
 <!-- The page's styles live in css/terms.css, NOT inline: CloudFront attaches
      a Content-Security-Policy with style-src 'self', which blocks inline
      <style> blocks entirely. Same ?v= cache-busting rule as the homepage. -->
-<link rel="stylesheet" href="css/terms.css?v=20260816">
+<link rel="stylesheet" href="css/terms.css?v=20260817">
 </head>
 <body>
 
@@ -773,7 +774,7 @@
       <a href="mailto:geniesolostech@gmail.com">geniesolostech@gmail.com</a> &nbsp;|&nbsp;
       <a href="tel:+12403219004">240&#8209;321&#8209;9004</a>
     </p>
-    <p class="foot__home"><a href="./">&larr; Back to geniesolos.com</a></p>
+    <p class="foot__home"><a href="privacy">Privacy Policy</a> &nbsp;|&nbsp; <a href="./">&larr; Back to geniesolos.com</a></p>
   </div>
 </footer>
 

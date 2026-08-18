@@ -38,7 +38,7 @@ $Bucket         = 'geniesolos-com-site'
 $DistributionId = 'E13HIX0DOKUMO1'
 $Region         = 'us-east-1'
 $SiteUrl        = 'https://geniesolos.com/'
-$HtmlFiles      = @('index.html', '404.html', 'terms.html', 'store.html')
+$HtmlFiles      = @('index.html', '404.html', 'terms.html', 'store.html', 'privacy.html')
 
 # $Region is passed explicitly to every AWS call below. Without it the CLI
 # falls back to whatever region the active profile happens to be configured
@@ -191,6 +191,16 @@ try {
     aws @cpArgs | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "upload failed: store (clean URL)" }
     Ok "uploaded store.html as /store"
+
+    # Clean-URL copy for the privacy policy, same reasoning as terms above.
+    # Keep identical to the extensionless upload in .github/workflows/deploy.yml.
+    $cpArgs = @('s3', 'cp', 'privacy.html', "s3://$Bucket/privacy", '--region', $Region,
+                '--cache-control', 'public, max-age=0, must-revalidate',
+                '--content-type', 'text/html; charset=utf-8')
+    if ($DryRun) { $cpArgs += '--dryrun' }
+    aws @cpArgs | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "upload failed: privacy (clean URL)" }
+    Ok "uploaded privacy.html as /privacy"
 
     # ---------------------------------------------------------------- 6
     if ($SkipInvalidation) {
