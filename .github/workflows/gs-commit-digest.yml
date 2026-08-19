@@ -1,0 +1,18 @@
+name: GS Commit Digest
+
+# Put this file in EVERY geniesoloscode repo at .github/workflows/gs-commit-digest.yml.
+# It hands the work to the one reusable workflow in geniesoloscode/.github, and
+# "secrets: inherit" passes the organization-level Gmail secrets through.
+
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  digest:
+    uses: geniesoloscode/.github/.github/workflows/gs-commit-digest.yml@main
+    secrets: inherit
