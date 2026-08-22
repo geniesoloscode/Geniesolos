@@ -1241,6 +1241,13 @@ p.contact__store-eyebrow {
   .hero::after { display: none; }
 }
 
+@media (max-width: 640px) {
+  /* mobile-only reorder: Authentic Creations, then Macedonia Baptist Church, then GenieSolos Cloud */
+  .work > .proj:nth-child(2) { order: -3; }
+  .work > .proj:nth-child(3) { order: -2; }
+  .work > .proj:nth-child(1) { order: -1; }
+}
+
 @media (max-width: 860px) {
   .nav__toggle { display: block; }
   .nav__links {
